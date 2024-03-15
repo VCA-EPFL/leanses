@@ -47,5 +47,3 @@ set_option pp.hideLensUpdates true
 #check <{ v with s3 ∘ c := "deep", s1 := "c" }>
 ---> <{ v ... }> : Example
 ```
-
-## Why lenses
