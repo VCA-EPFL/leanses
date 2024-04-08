@@ -29,6 +29,9 @@ abbrev Traversal' a b := Lens a a b b
 def lens (get: s → a) (set: s → b → t): Lens s t a b :=
   fun afb s => Functor.map (set s) (afb (get s))
 
+def lens' (get: s → a) (set: s → a → s): Lens' s a :=
+  lens get set
+
 def over (setter: Setter s t a b) (upd: a → b): s → t :=
   Id.run ∘ setter (pure ∘ upd)
 
@@ -101,13 +104,43 @@ open Lean Meta PrettyPrinter Delaborator SubExpr in
 --        (Lean.BinderInfo.default))
 --      (Lean.BinderInfo.default))
 
+structure TypeWithBinders where
+  typeName : Name
+  binders : Array (Name × Expr)
+  deriving Inhabited, Repr
+
+--def replaceBvars (binders : Array (Name × Expr)) (typeE : Expr) : Expr :=
+--
+
+def generateNamesAndBinders (x : Expr) (index : Int) (arr : Array (Name × Expr)) : CoreM (Array (Name × Expr)) := do
+  match x with
+  | Expr.forallE _ t r _ => do
+    let typeName ← mkFreshUserName "t"
+    generateNamesAndBinders r (index + 1) <| arr.push (typeName, t)
+  | Expr.sort _ => pure arr
+  | l => throwError "Unexpected construct in structure type: {repr l}"
+
+def generateFreshNamesAux (x : Expr) (arr : Array (TSyntax `ident)) : CoreM (Array (TSyntax `ident)) := do
+  match x with
+  | Expr.forallE _ _ r _ => do
+    let typeName := mkIdent <| ← mkFreshUserName "t"
+    generateFreshNamesAux r <| arr.push typeName
+  | Expr.sort _ => pure arr
+  | l => throwError "Unexpected construct in structure type: {repr l}"
+
+def generateFreshNames (x : Expr) : CoreM (Array (TSyntax `ident)) := generateFreshNamesAux x default
+
 syntax (name := mkAbstractLens) "mkabstractlenses" ident : command
 
-open Lean Meta PrettyPrinter Delaborator SubExpr in
+open Lean Meta PrettyPrinter Delaborator SubExpr Core in
 @[command_elab mkAbstractLens] def mkAbstractLensHandler : CommandElab
   | `(mkabstractlenses $i) => do
     let name ← resolveGlobalConstNoOverload i
     let structureType ← liftTermElabM <| liftMetaM <| inferType (Expr.const name [])
+    --let structureBinders ← liftCoreM <| generateNamesAndBinders structureType default
+    --let structureBinders ← liftCoreM <| ViewRaw.viewBinders 0 structureType
+    --trace[debug] "{structureBinders}"
+    let names : TSyntaxArray `ident ← liftCoreM <| generateFreshNames structureType
     let numArgs := structureType.getForallBinderNames.length
     trace[debug] "{numArgs}"
     let Name.str _ name' := name.eraseMacroScopes
@@ -116,6 +149,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr in
     let some info := getStructureInfo? env name
       | throwErrorAt i "Not a structure"
     logInfo m!"field names: {info.fieldNames}"
+    trace[debug] "{structureType}"
     for field in info.fieldInfo do
       trace[debug] "{repr field}"
       let proj := (env.find? field.projFn).get!
@@ -124,47 +158,44 @@ open Lean Meta PrettyPrinter Delaborator SubExpr in
       let fieldNameIdent := mkIdent $ name' ++ "l" ++ field.fieldName
       let fieldNameIdent' := mkIdent field.fieldName
       let freshName ← liftCoreM <| mkFreshUserName <| Name.mkSimple <| toString name' ++ "_" ++ toString fieldNameIdent
-      let stx ← liftTermElabM <| liftMetaM <| delab <| proj.type.getForallBodyMaxDepth (numArgs + 1)
-      trace[debug] "{field.projFn}: {repr (proj.type.getForallBodyMaxDepth (numArgs + 1))}:::{stx}"
-      let accessor ← `(fun a : $i:ident => ( a.$fieldNameIdent' : ($stx:term)))
+      --let stx ← liftTermElabM <| liftMetaM <| delab <| proj.type.getForallBodyMaxDepth (numArgs + 1)
+      --trace[debug] "{field.projFn}: {repr (proj.type.getForallBodyMaxDepth (numArgs + 1))}:::{stx}"
+      let accessor ← `(fun a => @$(mkIdent field.projFn) $names:ident* a)
       let setter ←
-        `(fun a : $i:ident =>
-          (fun b : ($stx:term) =>
-            { a with $fieldNameIdent':ident := b }))
-      let defn ← `(def $fieldNameIdent : Lens' $i:ident ($stx:term) := lens $accessor $setter)
+        `(fun a => (fun b => { a with $fieldNameIdent':ident := b }))
+      let appliedLens ← `((@$fieldNameIdent $names:ident* _ _))
+      let defn ← `(def $fieldNameIdent $names:ident* := @lens' _ _ $accessor $setter)
+      trace[debug] "{defn}"
       let view_set_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_view_set") :
-            ∀ (v : ($stx:term)) (s: $i:ident), @Eq ($stx:term)
-              (@view ($stx:term) ($i:ident)
-                $fieldNameIdent:ident (set $fieldNameIdent:ident v s)) v := by
-            simp [view, set, Functor.map, lens, Id.run, Const.get, $fieldNameIdent:ident])
+        `(@[simp] theorem $(mkIdent $ freshName ++ "_view_set") $names:ident* :
+            ∀ v s,
+              @view _ _
+                $appliedLens (@set _ _ _ _ $appliedLens v s) = v := by
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
+      trace[debug] "{view_set_lemma}"
       let set_set_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_set_set") :
-            ∀ v v' s, set $fieldNameIdent:ident v' (set $fieldNameIdent:ident v s)
-                      = set $fieldNameIdent:ident v' s := by
-            simp [view, set, Functor.map, lens, Id.run, Const.get, $fieldNameIdent:ident])
+        `(@[simp] theorem $(mkIdent $ freshName ++ "_set_set") $names:ident* :
+            ∀ v v' s, @set _ _ _ _ $appliedLens v' (@set _ _ _ _ $appliedLens v s)
+                      = @set _ _ _ _ $appliedLens v' s := by
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let set_view_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_set_view") :
-            ∀ s, set $fieldNameIdent:ident (@view ($stx:term) ($i:ident)
-                     $fieldNameIdent:ident s) s
+        `(@[simp] theorem $(mkIdent $ freshName ++ "_set_view") $names:ident* :
+            ∀ s, @set _ _ _ _ $appliedLens (@view _ _ $appliedLens s) s
                  = s := by
-            simp [view, set, Functor.map, lens, Id.run, Const.get, $fieldNameIdent:ident])
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let view_set_comp_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_view_set_comp") :
-            ∀ x y v s (f: Lens' ($stx:term) x) (g: Lens' ($stx:term) y),
-              @Eq x (@view x ($i:ident) ($fieldNameIdent:ident ∘ f)
-                (set ($fieldNameIdent:ident ∘ g) v s))
-              (@view x ($stx:term) f (@set ($stx:term) ($stx:term) y y g v (@view ($stx:term) ($i:ident)
-                   $fieldNameIdent:ident s))) := by
-            simp [view, set, Functor.map, lens, Id.run, Const.get, $fieldNameIdent:ident])
+        `(@[simp] theorem $(mkIdent $ freshName ++ "_view_set_comp") $names:ident* :
+            ∀ x y v s (f: Lens' _ x) (g: Lens' _ y),
+              @view x _ ($appliedLens ∘ f)
+                (@set _ _ _ _ ($appliedLens ∘ g) v s)
+              = @view x _ f (@set _ _ y y g v (@view _ _ $appliedLens s)) := by
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let view_set_comp2_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_view_set_comp2") :
+        `(@[simp] theorem $(mkIdent $ freshName ++ "_view_set_comp2") $names:ident* :
             ∀ y v s (g: Lens' _ y),
-              @Eq ($stx:term) (@view ($stx:term) ($i:ident) ($fieldNameIdent:ident)
-                (set ($fieldNameIdent:ident ∘ g) v s))
-              (@set ($stx:term) ($stx:term) y y g v
-                (@view ($stx:term) ($i:ident) $fieldNameIdent:ident s)) := by
-              simp [view, set, Functor.map, lens, Id.run, Const.get, $fieldNameIdent:ident])
+              @view _ _ $appliedLens (@set _ _ _ _ ($appliedLens ∘ g) v s)
+              = @set _ _ y y g v (@view _ _ $appliedLens s) := by
+              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       trace[debug] "{view_set_comp_lemma}"
       elabCommand <| defn
       elabCommand <| view_set_lemma
@@ -175,7 +206,8 @@ open Lean Meta PrettyPrinter Delaborator SubExpr in
     for main_field in info.fieldInfo do
       let main_proj := (env.find? main_field.projFn).get!
       let main_ident := mkIdent $ name' ++ "l" ++ main_field.fieldName
-      let main_type ← liftTermElabM <| liftMetaM <| delab <| main_proj.type.getForallBodyMaxDepth (numArgs + 1)
+      let main_lens ← `((@$main_ident $names:ident* _ _))
+      --let main_type ← liftTermElabM <| liftMetaM <| delab <| main_proj.type.getForallBodyMaxDepth (numArgs + 1)
       let freshName ← liftCoreM <| mkFreshUserName <| Name.mkSimple <| toString name' ++ "_" ++ toString main_ident
       for other_field in info.fieldInfo do
         if main_field.fieldName == other_field.fieldName then
@@ -183,74 +215,58 @@ open Lean Meta PrettyPrinter Delaborator SubExpr in
         else do
           let other_proj := (env.find? other_field.projFn).get!
           let other_ident := mkIdent $ name' ++ "l" ++ other_field.fieldName
+          let other_lens ← `((@$other_ident $names:ident* _ _))
           let other_type ← liftTermElabM <| liftMetaM <| delab <| other_proj.type.getForallBodyMaxDepth (numArgs + 1)
           let freshName' s := (mkIdent $ freshName ++ "_" ++ other_field.fieldName ++ s)
           let contr_set_view_lemma ←
-            `(@[simp] theorem $(freshName' "_set_view"):ident :
+            `(@[simp] theorem $(freshName' "_set_view"):ident $names:ident* :
                 ∀ v s,
-                  @Eq ($main_type) (@view ($main_type) ($i:ident) $main_ident:ident
-                    (set $(other_ident):ident v s))
-                  (@view ($main_type) ($i:ident) $main_ident:ident s) := by
-                  simp [view, set, Functor.map, lens, Id.run, Const.get, $main_ident:ident, $(other_ident):ident])
+                  @view _ _ $main_lens
+                    (@set _ _ _ _ $other_lens v s)
+                  = @view _ _ $main_lens s := by
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma ←
-            `(@[simp] theorem $(freshName' "_set_view_comp"):ident :
-                ∀ x v s (f: Lens' ($other_type) x),
-                  @Eq ($main_type) (@view ($main_type) ($i:ident) $main_ident:ident
-                    (set ($(other_ident):ident ∘ f) v s))
-                  (@view ($main_type) ($i:ident) $main_ident:ident s) := by
-                  simp [view, set, Functor.map, lens, Id.run, Const.get, $main_ident:ident, $(other_ident):ident])
+            `(@[simp] theorem $(freshName' "_set_view_comp"):ident $names:ident* :
+                ∀ x v s (f: Lens' _ x),
+                  @view _ _ $main_lens
+                    (@set _ _ _ _ ($other_lens ∘ f) v s)
+                  = @view _ _ $main_lens s := by
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
           elabCommand <| contr_set_view_lemma
           elabCommand <| contr_set_view_comp_lemma
-      trace[debug] "{freshName}"
   | _ => throwUnsupportedSyntax
 
 --instance EqFinString : Eq ({n : Nat} → Fin n → String) where
 --  eq
 
-structure SubEx (n : Nat) where
+structure SubEx1 where
+  c : Fin y → Fin n → String
+  c2 : Fin y → Fin n → String
+
+mkabstractlenses SubEx1
+
+structure SubEx {n : Nat} {f : Fin n} {g : Fin n} where
   c : String
-  c2 : Fin y → String
+  c3 : Fin y → Fin n → String
+  c2 : Fin y → Fin n → String
 
---def SubEx.l.c2 : Lens' SubEx ({n : Nat} → Fin n → String) :=
---      lens (fun (a : SubEx) => (a.c : {n:Nat} → Fin n → String)) (fun (a : SubEx) =>
---        (fun (b : ({n : Nat} → Fin n → String)) => { a with c := b }))
-
---#check (SubEx.c : {n : Nat} → SubEx n → (Fin n → String))
+#check SubEx
 
 -- `mklenses` automatically generates lenses for a structure.
-mkabstractlenses Leanses.AbstractLens.SubEx
+mkabstractlenses SubEx
 
-theorem SubEx_SubEx.l.c._view_set_comp :
-        ∀ x y v s (f : Lens' ({n : Nat} → Fin n → String) x) (g : Lens' ({n : Nat} → Fin n → String) y),
-          @Eq x (@view x (Leanses.AbstractLens.SubEx) (SubEx.l.c ∘ f) (set (SubEx.l.c ∘ g) v s))
-            (@view x ({n : Nat} → Fin n → String) f
-              (@set ({n : Nat} → Fin n → String) ({n : Nat} → Fin n → String) y y g v (@view ({n : Nat} → Fin n → String) (Leanses.AbstractLens.SubEx) SubEx.l.c s))) :=
-      by simp [view, set, Functor.map, lens, Id.run, Const.get, SubEx.l.c]
-
-#check (SubEx.l.c : Lens' SubEx ({n: Nat} → Fin n → String))
-
-@[simp]
-    theorem SubEx_SubEx.l.c._view_set :
-        ∀ (v : ({n: Nat} → Fin n → String)) (s: SubEx),
-          @Eq (∀ {n : Nat}, Fin n → String)
-            (@view ({n: Nat} → Fin n → String) SubEx SubEx.l.c (set SubEx.l.c v s)) v := by
-      simp [view, set, Functor.map, lens, Id.run, Const.get, SubEx.l.c]
-
-#check SubEx.l.c
-
-structure Example where
+structure Example (a) (b) (c) where
   s1 : String
   s2 : Int
-  s3 : (SubEx n)
-  deriving Repr
+  s3 : @SubEx a b c
 
 mkabstractlenses Leanses.AbstractLens.Example
 
 open SubEx.l in
 open Example.l in
 example :
-  ∀ v s, view s3 (set (s3 ∘ c) v s) = set c v (view s3 s) := by
-    simp [view, set, Functor.map, lens, Id.run, Const.get, s2, s1, s3]
+  ∀ a b d v (s : Example a b d), view (s3 _ _ _) (set ((s3 _ _ _) ∘ (c _ _ _)) v s) = set (c _ _ _) v (view (s3 _ _ _) s) := by
+    simp
 
 def v := Example.mk "a" 1 {c := "c"}
 
@@ -259,7 +275,7 @@ def v := Example.mk "a" 1 {c := "c"}
 
 open SubEx.l in
 open Example.l in
-example : view (s3 ∘ c) <{ v with s3 ∘ c := "deep", s2 := 5, s1 := "b", s3 ∘ c := "deep" }> = "deep" := by
+example : ∀ x, view s2 <{ v with s3 ∘ c := "deep", s2 := 5, s1 := "b", s3 ∘ c := "deep" }> = x := by
   simp
 
 example : view c (view (s3) <{ v with s3 ∘ c := "deep", s2 := 5, s1 := "b", s3 ∘ c := "deep" }>) = "deep" := by
