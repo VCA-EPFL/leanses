@@ -239,68 +239,63 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
 --instance EqFinString : Eq ({n : Nat} → Fin n → String) where
 --  eq
 
-structure SubEx1 where
-  c : Fin y → Fin n → String
-  c2 : Fin y → Fin n → String
-
-mkabstractlenses SubEx1
-
-structure SubEx {n : Nat} {f : Fin n} {g : Fin n} where
-  c : String
-  c3 : Fin y → Fin n → String
-  c2 : Fin y → Fin n → String
-
-#check SubEx
-
--- `mklenses` automatically generates lenses for a structure.
-mkabstractlenses SubEx
-
-structure Example (a) (b) (c) where
-  s1 : String
-  s2 : Int
-  s3 : @SubEx a b c
-
-mkabstractlenses Leanses.AbstractLens.Example
-
-open SubEx.l in
-open Example.l in
-example :
-  ∀ a b d v (s : Example a b d), view (s3 _ _ _) (set ((s3 _ _ _) ∘ (c _ _ _)) v s) = set (c _ _ _) v (view (s3 _ _ _) s) := by
-    simp
-
-def v := Example.mk "a" 1 {c := "c"}
-
--- Structure update syntax built into Lean
-#check { v with s2 := 5, s1 := "b" }
-
-open SubEx.l in
-open Example.l in
-example : ∀ x, view s2 <{ v with s3 ∘ c := "deep", s2 := 5, s1 := "b", s3 ∘ c := "deep" }> = x := by
-  simp
-
-example : view c (view (s3) <{ v with s3 ∘ c := "deep", s2 := 5, s1 := "b", s3 ∘ c := "deep" }>) = "deep" := by
-  simp
-
----> let src := v;
----> { s1 := "b", s2 := 5, s3 := src.s3 } : Example
-#check { v with s3.c := "deep", s1 := "c" }
----> let src := v;
----> { s1 := "c", s2 := src.s2,
---->   s3 :=
---->     let src := src.s3;
---->     { c := "deep" } } : Example
-
--- Structure updates using lenses
-#check <{ v with s2 := 5, s1 := "b" }>
----> <{ v with s2 := 5, s1 := "b" }> : Example
-#check <{ v with s3 ∘ c := "deep", s1 := "c" }>
----> <{ v with s3 ∘ c := "deep", s1 := "c" }> : Example
-
-set_option pp.hideLensUpdates true
-
-#check <{ v with s2 := 5, s1 := "b" }>
----> <{ v ... }> : Example
-#check <{ v with s3 ∘ c := "deep", s1 := "c" }>
----> <{ v ... }> : Example
+--structure SubEx1 where
+--  c : Fin y → Fin n → String
+--  c2 : Fin y → Fin n → String
+--
+--mkabstractlenses SubEx1
+--
+--structure SubEx {n : Nat} {f : Fin n} {g : Fin n} where
+--  c : String
+--  c3 : Fin y → Fin n → String
+--  c2 : Fin y → Fin n → String
+--
+--#check SubEx
+--
+---- `mklenses` automatically generates lenses for a structure.
+--mkabstractlenses SubEx
+--
+--structure Example (a) (b) (c) where
+--  s1 : String
+--  s2 : Int
+--  s3 : @SubEx a b c
+--
+--mkabstractlenses Leanses.AbstractLens.Example
+--
+--open SubEx.l in
+--open Example.l in
+--example :
+--  ∀ a b d v (s : Example a b d), view (s3 _ _ _) (set ((s3 _ _ _) ∘ (c _ _ _)) v s) = set (c _ _ _) v (view (s3 _ _ _) s) := by
+--    simp
+--
+--open SubEx.l in
+--open Example.l in
+--example : ∀ a b d x (v : Example a b d), view (s2 _ _ _) <{ v with (s3  _ _ _) ∘ (c _ _ _) := "deep", (s2  _ _ _) := 5, (s1 _ _ _) := "b", (s3 _ _ _) ∘ (c _ _ _) := "deep" }> = x := by
+--  simp
+--
+--example : view c (view (s3) <{ v with s3 ∘ c := "deep", s2 := 5, s1 := "b", s3 ∘ c := "deep" }>) = "deep" := by
+--  simp
+--
+-----> let src := v;
+-----> { s1 := "b", s2 := 5, s3 := src.s3 } : Example
+--#check { v with s3.c := "deep", s1 := "c" }
+-----> let src := v;
+-----> { s1 := "c", s2 := src.s2,
+----->   s3 :=
+----->     let src := src.s3;
+----->     { c := "deep" } } : Example
+--
+---- Structure updates using lenses
+--#check <{ v with s2 := 5, s1 := "b" }>
+-----> <{ v with s2 := 5, s1 := "b" }> : Example
+--#check <{ v with s3 ∘ c := "deep", s1 := "c" }>
+-----> <{ v with s3 ∘ c := "deep", s1 := "c" }> : Example
+--
+--set_option pp.hideLensUpdates true
+--
+--#check <{ v with s2 := 5, s1 := "b" }>
+-----> <{ v ... }> : Example
+--#check <{ v with s3 ∘ c := "deep", s1 := "c" }>
+-----> <{ v ... }> : Example
 
 end Leanses.AbstractLens
