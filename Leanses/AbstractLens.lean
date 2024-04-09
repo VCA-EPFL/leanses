@@ -157,7 +157,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
         | throwErrorAt i "not raiestn"
       let fieldNameIdent := mkIdent $ name' ++ "l" ++ field.fieldName
       let fieldNameIdent' := mkIdent field.fieldName
-      let freshName ← liftCoreM <| mkFreshUserName <| Name.mkSimple <| toString name' ++ "_" ++ toString fieldNameIdent
+      let freshName r := mkIdent <| name' ++ "l" ++ (Name.mkSimple (toString field.fieldName ++ r))
       --let stx ← liftTermElabM <| liftMetaM <| delab <| proj.type.getForallBodyMaxDepth (numArgs + 1)
       --trace[debug] "{field.projFn}: {repr (proj.type.getForallBodyMaxDepth (numArgs + 1))}:::{stx}"
       let accessor ← `(fun a => @$(mkIdent field.projFn) $names:ident* a)
@@ -167,31 +167,31 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       let defn ← `(def $fieldNameIdent $names:ident* := @lens' _ _ $accessor $setter)
       trace[debug] "{defn}"
       let view_set_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_view_set") $names:ident* :
+        `(@[simp] theorem $(freshName "_view_set") $names:ident* :
             ∀ v s,
               @view _ _
                 $appliedLens (@set _ _ _ _ $appliedLens v s) = v := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       trace[debug] "{view_set_lemma}"
       let set_set_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_set_set") $names:ident* :
+        `(@[simp] theorem $(freshName "_set_set") $names:ident* :
             ∀ v v' s, @set _ _ _ _ $appliedLens v' (@set _ _ _ _ $appliedLens v s)
                       = @set _ _ _ _ $appliedLens v' s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let set_view_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_set_view") $names:ident* :
+        `(@[simp] theorem $(freshName "_set_view") $names:ident* :
             ∀ s, @set _ _ _ _ $appliedLens (@view _ _ $appliedLens s) s
                  = s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let view_set_comp_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_view_set_comp") $names:ident* :
+        `(@[simp] theorem $(freshName "_view_set_comp") $names:ident* :
             ∀ x y v s (f: Lens' _ x) (g: Lens' _ y),
               @view x _ ($appliedLens ∘ f)
                 (@set _ _ _ _ ($appliedLens ∘ g) v s)
               = @view x _ f (@set _ _ y y g v (@view _ _ $appliedLens s)) := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let view_set_comp2_lemma ←
-        `(@[simp] theorem $(mkIdent $ freshName ++ "_view_set_comp2") $names:ident* :
+        `(@[simp] theorem $(freshName "_view_set_comp2") $names:ident* :
             ∀ y v s (g: Lens' _ y),
               @view _ _ $appliedLens (@set _ _ _ _ ($appliedLens ∘ g) v s)
               = @set _ _ y y g v (@view _ _ $appliedLens s) := by
@@ -208,7 +208,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       let main_ident := mkIdent $ name' ++ "l" ++ main_field.fieldName
       let main_lens ← `((@$main_ident $names:ident* _ _))
       --let main_type ← liftTermElabM <| liftMetaM <| delab <| main_proj.type.getForallBodyMaxDepth (numArgs + 1)
-      let freshName ← liftCoreM <| mkFreshUserName <| Name.mkSimple <| toString name' ++ "_" ++ toString main_ident
+      let freshName r y := mkIdent <| name' ++ "l" ++ (Name.mkSimple (toString main_field.fieldName ++ r ++ y))
       for other_field in info.fieldInfo do
         if main_field.fieldName == other_field.fieldName then
           pure ()
@@ -217,7 +217,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           let other_ident := mkIdent $ name' ++ "l" ++ other_field.fieldName
           let other_lens ← `((@$other_ident $names:ident* _ _))
           let other_type ← liftTermElabM <| liftMetaM <| delab <| other_proj.type.getForallBodyMaxDepth (numArgs + 1)
-          let freshName' s := (mkIdent $ freshName ++ "_" ++ other_field.fieldName ++ s)
+          let freshName' := freshName ("_" ++ toString other_field.fieldName)
           let contr_set_view_lemma ←
             `(@[simp] theorem $(freshName' "_set_view"):ident $names:ident* :
                 ∀ v s,
