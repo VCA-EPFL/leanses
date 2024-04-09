@@ -85,7 +85,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr in
   else failure
 
 -- set_option trace.Elab.match true in
-set_option trace.debug true
+-- set_option trace.debug true
 -- set_option trace.Meta.synthInstance true
 -- set_option trace.profiler true
 
@@ -232,12 +232,26 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                     (@set _ _ _ _ ($other_lens ∘ f) v s)
                   = @view _ _ $main_lens s := by
                   simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
+          let contr_set_view_comp_lemma2 ←
+            `(@[simp] theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
+                ∀ x y v s (g: Lens' _ y) (f: Lens' _ x),
+                  @view _ _ ($main_lens ∘ g)
+                    (@set _ _ _ _ ($other_lens ∘ f) v s)
+                  = @view _ _ ($main_lens ∘ g) s := by
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
+          let contr_set_view_comp_lemma3 ←
+            `(@[simp] theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
+                ∀ y v s (g: Lens' _ y),
+                  @view _ _ ($main_lens ∘ g)
+                    (@set _ _ _ _ $other_lens v s)
+                  = @view _ _ ($main_lens ∘ g) s := by
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
+          trace[debug] "{contr_set_view_comp_lemma3}"
           elabCommand <| contr_set_view_lemma
           elabCommand <| contr_set_view_comp_lemma
+          elabCommand <| contr_set_view_comp_lemma2
+          elabCommand <| contr_set_view_comp_lemma3
   | _ => throwUnsupportedSyntax
-
---instance EqFinString : Eq ({n : Nat} → Fin n → String) where
---  eq
 
 --structure SubEx1 where
 --  c : Fin y → Fin n → String
