@@ -196,6 +196,16 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             view_set := $(freshName "_view_set") $names:ident*
             set_set := $(freshName "_set_set") $names:ident*
             set_view := $(freshName "_set_view") $names:ident*)
+      let comp_view_lemma ←
+        `(@[simp] theorem $(freshName "_comp_view") $names:ident* :
+            ∀ α s (g : Lens' _ α), @view _ _ ($appliedLens ∘∘ g) s = @view _ _ g (@view _ _ $appliedLens s) := by
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
+      let comp_set_lemma ←
+        `(@[simp] theorem $(freshName "_comp_set") $names:ident* :
+            ∀ α v s (g : Lens' _ α), 
+              @set _ _ _ _ ($appliedLens ∘∘ g) v s 
+              = @set _ _ _ _ $appliedLens (@set _ _ _ _ g v (@view _ _ $appliedLens s)) s := by
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
       let view_set_comp_lemma ←
         `(@[simp] theorem $(freshName "_view_set_comp") $names:ident* :
             ∀ x y v s (f: Lens' _ x) (g: Lens' _ y),
@@ -209,20 +219,29 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
               @view _ _ $appliedLens (@set _ _ _ _ ($appliedLens ∘∘ g) v s)
               = @set _ _ y y g v (@view _ _ $appliedLens s) := by
               simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
+      let view_set_comp3_lemma ←
+        `(@[simp] theorem $(freshName "_view_set_comp3") $names:ident* :
+            ∀ y v s (g: Lens' _ y),
+              @view _ _ ($appliedLens ∘∘ g) (@set _ _ _ _ $appliedLens v s)
+              = @view _ _ g v := by
+              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
       trace[debug] "{defn}"
       trace[debug] "{view_set_lemma}"
       trace[debug] "{set_set_lemma}"
       trace[debug] "{set_view_lemma}"
       trace[debug] "{lawful_lens_instance}"
-      trace[debug] "{view_set_comp_lemma}"
-      trace[debug] "{view_set_comp2_lemma}"
+      trace[debug] "{comp_view_lemma}"
+      trace[debug] "{comp_set_lemma}"
       elabCommand <| defn
       elabCommand <| view_set_lemma
       elabCommand <| set_set_lemma
       elabCommand <| set_view_lemma
       elabCommand <| lawful_lens_instance
-      elabCommand <| view_set_comp_lemma
-      elabCommand <| view_set_comp2_lemma
+      elabCommand <| comp_view_lemma
+      elabCommand <| comp_set_lemma
+      --elabCommand <| view_set_comp_lemma
+      --elabCommand <| view_set_comp2_lemma
+      --elabCommand <| view_set_comp3_lemma
     for main_field in info.fieldInfo do
       -- let main_proj := (env.find? main_field.projFn).get!
       let main_ident := mkIdent $ name' ++ "l" ++ main_field.fieldName
@@ -269,9 +288,9 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           trace[debug] "{contr_set_view_lemma}"
           trace[debug] "{contr_set_view_comp_lemma3}"
           elabCommand <| contr_set_view_lemma
-          elabCommand <| contr_set_view_comp_lemma
-          elabCommand <| contr_set_view_comp_lemma2
-          elabCommand <| contr_set_view_comp_lemma3
+          --elabCommand <| contr_set_view_comp_lemma
+          --elabCommand <| contr_set_view_comp_lemma2
+          --elabCommand <| contr_set_view_comp_lemma3
   | _ => throwUnsupportedSyntax
 
 --#check (Id.run (pure (∀ a, a = a)))
@@ -281,6 +300,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
 --  c2 : Fin y → Fin n → String
 --
 --mkabstractlenses SubEx1
+
 --
 --@[simp]
 --    theorem SubEx1.l.c_view_set_comp3 t t1 :
