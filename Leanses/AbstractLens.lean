@@ -8,22 +8,26 @@ namespace Leanses.AbstractLens
 structure Const (α β: Type _) where
   get : α
 
-instance ConstFunctor : Functor (Const α) where
+instance : Functor (Const α) where
   map _ a := Const.mk a.get
 
-instance ConstApplicative [Inhabited α] [Append α] : Applicative (Const α) where
+instance : LawfulFunctor (Const α) where
+  id_map := by
+    intros; unfold id Functor.map instFunctorConst; simp
+  comp_map := by
+    intros; unfold Functor.map instFunctorConst; simp
+  map_const := by
+    unfold Functor.mapConst Functor.map instFunctorConst
+    simp
+
+instance [Inhabited α] [Append α] : Applicative (Const α) where
   pure _ := Const.mk default
   seq f a := Const.mk $ f.get ++ (a ()).get
 
-abbrev Setter s t a b := (a → Id b) → s → Id t
-abbrev Setter' a b := Setter a a b b
-
-abbrev Getter r s a := (a → Const r a) → s → Const r s
-
-abbrev Lens s t a b := ∀ {f}, [Functor f] → (a → f b) → s → f t
+def Lens s t a b := ∀ {f} [Functor f], (a → f b) → s → f t
 abbrev Lens' a b := Lens a a b b
 
-abbrev Traversal s t a b := ∀ {f}, [Applicative f] → (a → f b) → s → f t
+def Traversal s t a b := ∀ {f}, [Applicative f] → (a → f b) → s → f t
 abbrev Traversal' a b := Lens a a b b
 
 def lens (get: s → a) (set: s → b → t): Lens s t a b :=
@@ -32,18 +36,22 @@ def lens (get: s → a) (set: s → b → t): Lens s t a b :=
 def lens' (get: s → a) (set: s → a → s): Lens' s a :=
   lens get set
 
-def over (setter: Setter s t a b) (upd: a → b): s → t :=
+def over (setter: Lens s t a b) (upd: a → b): s → t :=
   Id.run ∘ setter (pure ∘ upd)
 
-def set (setter: Setter s t a b) (v: b): s → t :=
+def set (setter: Lens s t a b) (v: b): s → t :=
   Id.run ∘ setter (fun _ => pure v)
 
-def view (getting: Getter a s a): s → a := Const.get ∘ getting Const.mk
+def view (getting: Lens' s a): s → a := Const.get ∘ getting Const.mk
 
-def setL (setter: Lens s t a b) (v: b): s → t :=
-  Id.run ∘ setter (fun _ => pure v)
+class LawfulLens (l : Lens' s a) : Prop where
+  view_set : ∀ s v, view l (set l v s) = v
+  set_view : ∀ s, set l (view l s) s = s
+  set_set : ∀ s v v', set l v' (set l v s) = set l v' s
 
-def viewL (getting: Lens' s a): s → a := Const.get ∘ getting Const.mk
+def comp (f : Lens s t a b) (g : Lens a b x y): Lens s t x y := f ∘ g
+
+infixr:90 " ∘∘ " => comp
 
 --------------------------------------------------------------------------------
 
@@ -152,9 +160,9 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
     trace[debug] "{structureType}"
     for field in info.fieldInfo do
       trace[debug] "{repr field}"
-      let proj := (env.find? field.projFn).get!
-      let some other ← getProjectionFnInfo? field.projFn
-        | throwErrorAt i "not raiestn"
+      --let proj := (env.find? field.projFn).get!
+      --let some other ← getProjectionFnInfo? field.projFn
+      --  | throwErrorAt i "not raiestn"
       let fieldNameIdent := mkIdent $ name' ++ "l" ++ field.fieldName
       let fieldNameIdent' := mkIdent field.fieldName
       let freshName r := mkIdent <| name' ++ "l" ++ (Name.mkSimple (toString field.fieldName ++ r))
@@ -163,60 +171,72 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       let accessor ← `(fun a => @$(mkIdent field.projFn) $names:ident* a)
       let setter ←
         `(fun a => (fun b => { a with $fieldNameIdent':ident := b }))
-      let appliedLens ← `((@$fieldNameIdent $names:ident* _ _))
+      --let appliedLens ← `((@$fieldNameIdent $names:ident* _ _ _))
+      let appliedLens ← `((@$fieldNameIdent $names:ident*))
       let defn ← `(def $fieldNameIdent $names:ident* := @lens' _ _ $accessor $setter)
       trace[debug] "{defn}"
       let view_set_lemma ←
         `(@[simp] theorem $(freshName "_view_set") $names:ident* :
-            ∀ v s,
+            ∀ s v,
               @view _ _
                 $appliedLens (@set _ _ _ _ $appliedLens v s) = v := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       trace[debug] "{view_set_lemma}"
       let set_set_lemma ←
         `(@[simp] theorem $(freshName "_set_set") $names:ident* :
-            ∀ v v' s, @set _ _ _ _ $appliedLens v' (@set _ _ _ _ $appliedLens v s)
+            ∀ s v v', @set _ _ _ _ $appliedLens v' (@set _ _ _ _ $appliedLens v s)
                       = @set _ _ _ _ $appliedLens v' s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let set_view_lemma ←
         `(@[simp] theorem $(freshName "_set_view") $names:ident* :
-            ∀ s, @set _ _ _ _ $appliedLens (@view _ _ $appliedLens s) s
-                 = s := by
+            ∀ s, @set _ _ _ _ $appliedLens (@view _ _ $appliedLens s) s = s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
+      let lawful_lens_instance ←
+        `(instance ($names:ident*) : LawfulLens ($fieldNameIdent $names:ident*) where
+            view_set := $(freshName "_view_set") $names:ident*
+            set_set := $(freshName "_set_set") $names:ident*
+            set_view := $(freshName "_set_view") $names:ident*)
       let view_set_comp_lemma ←
         `(@[simp] theorem $(freshName "_view_set_comp") $names:ident* :
             ∀ x y v s (f: Lens' _ x) (g: Lens' _ y),
-              @view x _ ($appliedLens ∘ f)
-                (@set _ _ _ _ ($appliedLens ∘ g) v s)
-              = @view x _ f (@set _ _ y y g v (@view _ _ $appliedLens s)) := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
+              @view _ _ ($appliedLens ∘∘ f)
+                (@set _ _ _ _ ($appliedLens ∘∘ g) v s)
+              = @view _ _ f (@set _ _ y y g v (@view _ _ $appliedLens s)) := by
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
       let view_set_comp2_lemma ←
         `(@[simp] theorem $(freshName "_view_set_comp2") $names:ident* :
             ∀ y v s (g: Lens' _ y),
-              @view _ _ $appliedLens (@set _ _ _ _ ($appliedLens ∘ g) v s)
+              @view _ _ $appliedLens (@set _ _ _ _ ($appliedLens ∘∘ g) v s)
               = @set _ _ y y g v (@view _ _ $appliedLens s) := by
-              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
+              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
+      trace[debug] "{defn}"
+      trace[debug] "{view_set_lemma}"
+      trace[debug] "{set_set_lemma}"
+      trace[debug] "{set_view_lemma}"
+      trace[debug] "{lawful_lens_instance}"
       trace[debug] "{view_set_comp_lemma}"
+      trace[debug] "{view_set_comp2_lemma}"
       elabCommand <| defn
       elabCommand <| view_set_lemma
       elabCommand <| set_set_lemma
       elabCommand <| set_view_lemma
+      elabCommand <| lawful_lens_instance
       elabCommand <| view_set_comp_lemma
       elabCommand <| view_set_comp2_lemma
     for main_field in info.fieldInfo do
-      let main_proj := (env.find? main_field.projFn).get!
+      -- let main_proj := (env.find? main_field.projFn).get!
       let main_ident := mkIdent $ name' ++ "l" ++ main_field.fieldName
-      let main_lens ← `((@$main_ident $names:ident* _ _))
+      let main_lens ← `((@$main_ident $names:ident*))
       --let main_type ← liftTermElabM <| liftMetaM <| delab <| main_proj.type.getForallBodyMaxDepth (numArgs + 1)
       let freshName r y := mkIdent <| name' ++ "l" ++ (Name.mkSimple (toString main_field.fieldName ++ r ++ y))
       for other_field in info.fieldInfo do
         if main_field.fieldName == other_field.fieldName then
           pure ()
         else do
-          let other_proj := (env.find? other_field.projFn).get!
+          -- let other_proj := (env.find? other_field.projFn).get!
           let other_ident := mkIdent $ name' ++ "l" ++ other_field.fieldName
-          let other_lens ← `((@$other_ident $names:ident* _ _))
-          let other_type ← liftTermElabM <| liftMetaM <| delab <| other_proj.type.getForallBodyMaxDepth (numArgs + 1)
+          let other_lens ← `((@$other_ident $names:ident*))
+          -- let other_type ← liftTermElabM <| liftMetaM <| delab <| other_proj.type.getForallBodyMaxDepth (numArgs + 1)
           let freshName' := freshName ("_" ++ toString other_field.fieldName)
           let contr_set_view_lemma ←
             `(@[simp] theorem $(freshName' "_set_view"):ident $names:ident* :
@@ -229,23 +249,24 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             `(@[simp] theorem $(freshName' "_set_view_comp"):ident $names:ident* :
                 ∀ x v s (f: Lens' _ x),
                   @view _ _ $main_lens
-                    (@set _ _ _ _ ($other_lens ∘ f) v s)
+                    (@set _ _ _ _ ($other_lens ∘∘ f) v s)
                   = @view _ _ $main_lens s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma2 ←
             `(@[simp] theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
                 ∀ x y v s (g: Lens' _ y) (f: Lens' _ x),
-                  @view _ _ ($main_lens ∘ g)
-                    (@set _ _ _ _ ($other_lens ∘ f) v s)
-                  = @view _ _ ($main_lens ∘ g) s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
+                  @view _ _ ($main_lens ∘∘ g)
+                    (@set _ _ _ _ ($other_lens ∘∘ f) v s)
+                  = @view _ _ ($main_lens ∘∘ g) s := by
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma3 ←
             `(@[simp] theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
                 ∀ y v s (g: Lens' _ y),
-                  @view _ _ ($main_lens ∘ g)
+                  @view _ _ ($main_lens ∘∘ g)
                     (@set _ _ _ _ $other_lens v s)
-                  = @view _ _ ($main_lens ∘ g) s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
+                  = @view _ _ ($main_lens ∘∘ g) s := by
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $main_ident:ident, $other_ident:ident])
+          trace[debug] "{contr_set_view_lemma}"
           trace[debug] "{contr_set_view_comp_lemma3}"
           elabCommand <| contr_set_view_lemma
           elabCommand <| contr_set_view_comp_lemma
@@ -253,12 +274,21 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           elabCommand <| contr_set_view_comp_lemma3
   | _ => throwUnsupportedSyntax
 
---structure SubEx1 where
+--#check (Id.run (pure (∀ a, a = a)))
+--
+--structure SubEx1 (y n)  where
 --  c : Fin y → Fin n → String
 --  c2 : Fin y → Fin n → String
 --
 --mkabstractlenses SubEx1
 --
+--@[simp]
+--    theorem SubEx1.l.c_view_set_comp3 t t1 :
+--        ∀ x y v s (f : Lens' _ x) (g : Lens' _ y),
+--          @view _ _ ((@SubEx1.l.c t t1) ∘∘ f) (@set _ _ y y ((@SubEx1.l.c t t1) ∘∘ g) v s) =
+--            @view _ _ f (@set _ _ y y g v (@view _ _ (@SubEx1.l.c t t1) s)) :=
+--      by simp [view, set, Functor.map, lens', lens, Id.run, Const.get, SubEx1.l.c, comp]
+
 --structure SubEx {n : Nat} {f : Fin n} {g : Fin n} where
 --  c : String
 --  c3 : Fin y → Fin n → String
