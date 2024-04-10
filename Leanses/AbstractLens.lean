@@ -238,9 +238,9 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       elabCommand <| set_view_lemma
       elabCommand <| lawful_lens_instance
       elabCommand <| comp_view_lemma
-      elabCommand <| comp_set_lemma
+      --elabCommand <| comp_set_lemma
       --elabCommand <| view_set_comp_lemma
-      --elabCommand <| view_set_comp2_lemma
+      elabCommand <| view_set_comp2_lemma
       --elabCommand <| view_set_comp3_lemma
     for main_field in info.fieldInfo do
       -- let main_proj := (env.find? main_field.projFn).get!
@@ -288,7 +288,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           trace[debug] "{contr_set_view_lemma}"
           trace[debug] "{contr_set_view_comp_lemma3}"
           elabCommand <| contr_set_view_lemma
-          --elabCommand <| contr_set_view_comp_lemma
+          elabCommand <| contr_set_view_comp_lemma
           --elabCommand <| contr_set_view_comp_lemma2
           --elabCommand <| contr_set_view_comp_lemma3
   | _ => throwUnsupportedSyntax
