@@ -251,4 +251,28 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           --elabCommand <| contr_set_view_comp_lemma3
   | _ => throwUnsupportedSyntax
 
+def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n -> a) : Fin n -> a :=
+  fun i =>
+    if i == i' then
+      e
+    else
+      f i
+
+@[simp]
+theorem update_Fin_gso {a: Type} (i i' : Fin n)  (e : a) (f : Fin n -> a) :
+  ¬(i = i') -> update_Fin i' e f i = f i := by
+    intro h1
+    unfold update_Fin
+    simp [*] at *
+
+
+@[simp]
+theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n -> a) :
+  update_Fin i e f i  = e := by
+    unfold update_Fin
+    simp
+
+def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
+  lens' (fun a => a i) (fun a b => update_Fin i b a)
+
 end Leanses
