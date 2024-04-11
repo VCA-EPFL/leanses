@@ -124,7 +124,6 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
     let env ← getEnv
     let some info := getStructureInfo? env name
       | throwErrorAt i "Not a structure"
-    logInfo m!"field names: {info.fieldNames}"
     trace[debug] "{structureType}"
     for field in info.fieldInfo do
       trace[debug] "{repr field}"
@@ -194,6 +193,8 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       trace[debug] "{lawful_lens_instance}"
       trace[debug] "{comp_view_lemma}"
       trace[debug] "{comp_set_lemma}"
+      trace[debug] "{view_set_comp_lemma}"
+      trace[debug] "{view_set_comp3_lemma}"
       elabCommand <| defn
       elabCommand <| view_set_lemma
       elabCommand <| set_set_lemma
@@ -244,6 +245,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                   = @view _ _ ($main_lens ⊚ g) s := by
                   simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $main_ident:ident, $other_ident:ident])
           trace[debug] "{contr_set_view_lemma}"
+          trace[debug] "{contr_set_view_comp_lemma2}"
           trace[debug] "{contr_set_view_comp_lemma3}"
           elabCommand <| contr_set_view_lemma
           elabCommand <| contr_set_view_comp_lemma
@@ -260,17 +262,11 @@ def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n -> a) : Fin n -> a :=
 
 @[simp]
 theorem update_Fin_gso {a: Type} (i i' : Fin n)  (e : a) (f : Fin n -> a) :
-  ¬(i = i') -> update_Fin i' e f i = f i := by
-    intro h1
-    unfold update_Fin
-    simp [*] at *
-
+  ¬(i = i') -> update_Fin i' e f i = f i := by intro h1; simp [update_Fin, h1]
 
 @[simp]
 theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n -> a) :
-  update_Fin i e f i  = e := by
-    unfold update_Fin
-    simp
+  update_Fin i e f i  = e := by simp [update_Fin]
 
 def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
   lens' (fun a => a i) (fun a b => update_Fin i b a)
