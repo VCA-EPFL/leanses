@@ -55,8 +55,8 @@ class LawfulLens (l : Lens' s a) : Prop where
 def comp (f : Lens s t a b) (g : Lens a b x y): Lens s t x y :=
   fun F [Functor F] => f F ∘ g F
 
-infixr:90 "∘∘" => comp
 infixr:90 "⊚" => comp
+infixr:90 "∘∘" => comp
 
 infix:60 "^." => (flip view)
 
