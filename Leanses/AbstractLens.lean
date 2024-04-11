@@ -6,8 +6,8 @@ import Leanses.Lens
 
 namespace Leanses.AbstractLens
 
-export Leanses.Lens (Const Lens Lens' Traversal Traversal' lens lens'
-                     over set view LawfulLens comp)
+export Leanses (Const Const.get Lens Lens' Traversal Traversal' lens lens'
+                over set view LawfulLens comp)
 
 syntax (name := mkAbstractLens) "mkabstractlenses" ident : command
 

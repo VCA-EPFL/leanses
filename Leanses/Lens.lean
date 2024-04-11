@@ -4,7 +4,7 @@ import Lean.Data.Options
 import Leanses.Options
 import Aesop
 
-namespace Leanses.Lens
+namespace Leanses
 
 declare_aesop_rule_sets [lens]
 
@@ -55,8 +55,10 @@ class LawfulLens (l : Lens' s a) : Prop where
 def comp (f : Lens s t a b) (g : Lens a b x y): Lens s t x y :=
   fun F [Functor F] => f F ∘ g F
 
-infixr:90 " ∘∘ " => comp
-infixr:90 " ⊚ " => comp
+infixr:90 "∘∘" => comp
+infixr:90 "⊚" => comp
+
+infix:60 "^." => (flip view)
 
 --------------------------------------------------------------------------------
 
@@ -68,7 +70,7 @@ macro_rules
   | `(<{$y with $x := $z, $[$xs:term := $zs:term],*}>) =>
     `(set $x $z (<{ $y with $[$xs:term := $zs:term],* }>))
 
-@[app_unexpander Leanses.Lens.set]
+@[app_unexpander Leanses.set]
 def unexpanderSet : Lean.PrettyPrinter.Unexpander
   | `($(_) $lens:term $item:term <{ $rest:term with $[$xs:term := $zs:term],* }>) =>
     `(<{ $rest:term with $lens:term := $item:term, $[$xs:term := $zs:term],* }>)
@@ -77,7 +79,7 @@ def unexpanderSet : Lean.PrettyPrinter.Unexpander
   | _ => throw ()
 
 open Lean Meta PrettyPrinter Delaborator SubExpr in
-@[delab app.Leanses.Lens.set] def delabExpandSet : Delab := do
+@[delab app.Leanses.set] def delabExpandSet : Delab := do
   let o ← getOptions
   if o.get pp.hideLensUpdates.name pp.hideLensUpdates.defValue then do
     let e ← getExpr
@@ -247,4 +249,4 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           --elabCommand <| contr_set_view_comp_lemma3
   | _ => throwUnsupportedSyntax
 
-end Leanses.Lens
+end Leanses
