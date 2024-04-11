@@ -136,19 +136,19 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       let defn ← `(def $fieldNameIdent $names:ident* := @lens' _ _ $accessor $setter)
       trace[debug] "{defn}"
       let view_set_lemma ←
-        `(@[aesop (rule_sets := [lens])] theorem $(freshName "_view_set") $names:ident* :
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set") $names:ident* :
             ∀ s v,
               @view _ _
                 $appliedLens (@set _ _ _ _ $appliedLens v s) = v := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       trace[debug] "{view_set_lemma}"
       let set_set_lemma ←
-        `(@[aesop (rule_sets := [lens])] theorem $(freshName "_set_set") $names:ident* :
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_set_set") $names:ident* :
             ∀ s v v', @set _ _ _ _ $appliedLens v' (@set _ _ _ _ $appliedLens v s)
                       = @set _ _ _ _ $appliedLens v' s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let set_view_lemma ←
-        `(@[aesop (rule_sets := [lens])] theorem $(freshName "_set_view") $names:ident* :
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_set_view") $names:ident* :
             ∀ s, @set _ _ _ _ $appliedLens (@view _ _ $appliedLens s) s = s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let lawful_lens_instance ←
@@ -157,30 +157,30 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             set_set := $(freshName "_set_set") $names:ident*
             set_view := $(freshName "_set_view") $names:ident*)
       let comp_view_lemma ←
-        `(@[aesop (rule_sets := [lens])] theorem $(freshName "_comp_view") $names:ident* :
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_view") $names:ident* :
             ∀ α s (g : Lens' _ α), @view _ _ ($appliedLens ⊚ g) s = @view _ _ g (@view _ _ $appliedLens s) := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
       let comp_set_lemma ←
-        `(@[aesop (rule_sets := [lens])] theorem $(freshName "_comp_set") $names:ident* :
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_set") $names:ident* :
             ∀ α v s (g : Lens' _ α),
               @set _ _ _ _ ($appliedLens ⊚ g) v s
               = @set _ _ _ _ $appliedLens (@set _ _ _ _ g v (@view _ _ $appliedLens s)) s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
       let view_set_comp_lemma ←
-        `(@[aesop (rule_sets := [lens])] theorem $(freshName "_view_set_comp") $names:ident* :
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp") $names:ident* :
             ∀ x y v s (f: Lens' _ x) (g: Lens' _ y),
               @view _ _ ($appliedLens ⊚ f)
                 (@set _ _ _ _ ($appliedLens ⊚ g) v s)
               = @view _ _ f (@set _ _ y y g v (@view _ _ $appliedLens s)) := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
       let view_set_comp2_lemma ←
-        `(@[aesop (rule_sets := [lens])] theorem $(freshName "_view_set_comp2") $names:ident* :
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp2") $names:ident* :
             ∀ y v s (g: Lens' _ y),
               @view _ _ $appliedLens (@set _ _ _ _ ($appliedLens ⊚ g) v s)
               = @set _ _ y y g v (@view _ _ $appliedLens s) := by
               simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
       let view_set_comp3_lemma ←
-        `(@[aesop (rule_sets := [lens])] theorem $(freshName "_view_set_comp3") $names:ident* :
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp3") $names:ident* :
             ∀ y v s (g: Lens' _ y),
               @view _ _ ($appliedLens ⊚ g) (@set _ _ _ _ $appliedLens v s)
               = @view _ _ g v := by
@@ -214,28 +214,28 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           let other_lens ← `((@$other_ident $names:ident*))
           let freshName' := freshName ("_" ++ toString other_field.fieldName)
           let contr_set_view_lemma ←
-            `(@[aesop (rule_sets := [lens])] theorem $(freshName' "_set_view"):ident $names:ident* :
+            `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view"):ident $names:ident* :
                 ∀ v s,
                   @view _ _ $main_lens
                     (@set _ _ _ _ $other_lens v s)
                   = @view _ _ $main_lens s := by
                   simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma ←
-            `(@[aesop (rule_sets := [lens])] theorem $(freshName' "_set_view_comp"):ident $names:ident* :
+            `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp"):ident $names:ident* :
                 ∀ x v s (f: Lens' _ x),
                   @view _ _ $main_lens
                     (@set _ _ _ _ ($other_lens ⊚ f) v s)
                   = @view _ _ $main_lens s := by
                   simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma2 ←
-            `(@[aesop (rule_sets := [lens])] theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
+            `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
                 ∀ x y v s (g: Lens' _ y) (f: Lens' _ x),
                   @view _ _ ($main_lens ⊚ g)
                     (@set _ _ _ _ ($other_lens ⊚ f) v s)
                   = @view _ _ ($main_lens ⊚ g) s := by
                   simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma3 ←
-            `(@[aesop (rule_sets := [lens])] theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
+            `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
                 ∀ y v s (g: Lens' _ y),
                   @view _ _ ($main_lens ⊚ g)
                     (@set _ _ _ _ $other_lens v s)
