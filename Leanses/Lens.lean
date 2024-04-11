@@ -47,6 +47,8 @@ def set (setter: Lens s t a b) (v: b): s → t :=
 
 def view (getting: Lens' s a): s → a := Const.get ∘ getting (Const a) Const.mk
 
+def fview {s a} := flip (@view s a)
+
 class LawfulLens (l : Lens' s a) : Prop where
   view_set : ∀ s v, view l (set l v s) = v
   set_view : ∀ s, set l (view l s) s = s
@@ -58,7 +60,7 @@ def comp (f : Lens s t a b) (g : Lens a b x y): Lens s t x y :=
 infixr:90 "⊚" => comp
 infixr:90 "∘∘" => comp
 
-infix:60 "^." => (flip view)
+infix:60 "^." => fview
 
 --------------------------------------------------------------------------------
 
