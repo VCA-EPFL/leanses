@@ -27,11 +27,40 @@ instance [Inhabited α] [Append α] : Applicative (Const α) where
   pure _ := Const.mk default
   seq f a := Const.mk $ f.get ++ (a ()).get
 
+structure Endo (α: Type _) where
+  appEndo : α → α
+
+instance : Append (Endo α) where
+  append a b := Endo.mk (a.appEndo ∘ b.appEndo)
+
+instance : Inhabited (Endo α) where
+  default := Endo.mk id
+
 def Lens s t a b := ∀ f [Functor f], (a → f b) → s → f t
 abbrev Lens' a b := Lens a a b b
 
 def Traversal s t a b := ∀ f [Applicative f], (a → f b) → s → f t
 abbrev Traversal' a b := Lens a a b b
+
+instance : Coe (Lens s t a b) (Traversal s t a b) where
+  coe a := fun F => a F
+
+def Getting r s a := (a -> Const r a) -> s -> Const r s
+
+instance : Coe (Lens' a b) (Getting r a b) where
+  coe a := a (Const r)
+
+instance : Coe (Traversal' a b) (Getting r a b) where
+  coe a := a (Const r)
+
+def ASetter s t a b := (a → Id b) → s → Id t
+abbrev ASetter' s a := ASetter s s a a
+
+instance : Coe (Lens s t a b) (ASetter s t a b) where
+  coe a := a Id
+
+instance : Coe (Traversal s t a b) (ASetter s t a b) where
+  coe a := a Id
 
 def lens (get: s → a) (set: s → b → t): Lens s t a b :=
   fun F [Functor F] afb s => Functor.map (set s) (afb (get s))
@@ -263,6 +292,13 @@ def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n -> a) : Fin n -> a :=
 @[simp]
 theorem update_Fin_gso {a: Type} (i i' : Fin n)  (e : a) (f : Fin n -> a) :
   ¬(i = i') -> update_Fin i' e f i = f i := by intro h1; simp [update_Fin, h1]
+
+@[simp]
+theorem update_Fin_gso2 {a: Type} (i i' : Fin n)  (e : a) (f : Fin n -> a) :
+  ¬(i' = i) -> update_Fin i' e f i = f i := by
+    intro h1
+    have h1 := Ne.symm h1
+    simp [Ne, *]
 
 @[simp]
 theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n -> a) :
