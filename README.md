@@ -6,12 +6,15 @@ more flexible record update syntax that can be manipulated to provide better
 pretty-printing of such updates.
 
 ```lean
+import Leanses
+
 structure SubEx where
   c : String
   deriving Repr
 
 -- `mklenses` automatically generates lenses for a structure.
 mklenses SubEx
+open SubEx.l
 
 structure Example where
   s1 : String
@@ -20,30 +23,53 @@ structure Example where
   deriving Repr
 
 mklenses Example
+open Example.l
 
 def v := Example.mk "a" 1 {c := "c"}
 
 -- Structure update syntax built into Lean
+/--
+info: let __src := v;
+{ s1 := "b", s2 := 5, s3 := __src.s3 } : Example
+-/
+#guard_msgs in
 #check { v with s2 := 5, s1 := "b" }
----> let src := v;
----> { s1 := "b", s2 := 5, s3 := src.s3 } : Example
+
+/--
+info: let __src := v;
+{ s1 := "c", s2 := __src.s2,
+  s3 :=
+    let __src := __src.s3;
+    { c := "deep" } } : Example
+-/
+#guard_msgs in
 #check { v with s3.c := "deep", s1 := "c" }
----> let src := v;
----> { s1 := "c", s2 := src.s2,
---->   s3 :=
---->     let src := src.s3;
---->     { c := "deep" } } : Example
 
 -- Structure updates using lenses
+
+/--
+info: <{ v with s2 := 5, s1 := "b" }> : Example
+-/
+#guard_msgs in
 #check <{ v with s2 := 5, s1 := "b" }>
----> <{ v with s2 := 5, s1 := "b" }> : Example
-#check <{ v with s3 ∘ c := "deep", s1 := "c" }>
----> <{ v with s3 ∘ c := "deep", s1 := "c" }> : Example
+
+/--
+info: <{ v with s3∘∘c := "deep", s1 := "c" }> : Example
+-/
+#guard_msgs in
+#check <{ v with s3∘∘c := "deep", s1 := "c" }>
 
 set_option pp.hideLensUpdates true
 
+/--
+info: <{ v ... }> : Example
+-/
+#guard_msgs in
 #check <{ v with s2 := 5, s1 := "b" }>
----> <{ v ... }> : Example
-#check <{ v with s3 ∘ c := "deep", s1 := "c" }>
----> <{ v ... }> : Example
+
+/--
+info: <{ v ... }> : Example
+-/
+#guard_msgs in
+#check <{ v with s3∘∘c := "deep", s1 := "c" }>
 ```
