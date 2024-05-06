@@ -27,11 +27,18 @@ instance [Inhabited α] [Append α] : Applicative (Const α) where
   pure _ := Const.mk default
   seq f a := Const.mk $ f.get ++ (a ()).get
 
+class IndexedFunctor (f : Type _ → Type _ → Type _) where
+    -- | imap is similar to fmap
+    imap : (x → y) -- ^ function to apply to first parameter
+           → (a → b) -- ^ function to apply to second parameter
+           → f x a    -- ^ indexed functor
+           → f y b
+
 structure Endo (α: Type _) where
-  appEndo : α → α
+  app : α → α
 
 instance : Append (Endo α) where
-  append a b := Endo.mk (a.appEndo ∘ b.appEndo)
+  append a b := Endo.mk (a.app ∘ b.app)
 
 instance : Inhabited (Endo α) where
   default := Endo.mk id
@@ -39,18 +46,24 @@ instance : Inhabited (Endo α) where
 def Lens s t a b := ∀ f [Functor f], (a → f b) → s → f t
 abbrev Lens' a b := Lens a a b b
 
-def Traversal s t a b := ∀ f [Applicative f], (a → f b) → s → f t
-abbrev Traversal' a b := Lens a a b b
+def Traversal s t a b := ∀ f [Functor f] [Applicative f], (a → f b) → s → f t
+abbrev Traversal' a b := Traversal a a b b
+
+def ITraversal s t a b := ∀ f [Functor f] [Applicative f], (a → f b) → s → f t
+abbrev ITraversal' a b := Traversal a a b b
 
 instance : Coe (Lens s t a b) (Traversal s t a b) where
   coe a := fun F => a F
 
-def Getting r s a := (a -> Const r a) -> s -> Const r s
+instance : Coe (Lens' s a) (Traversal' s a) where
+  coe a := fun F => a F
 
-instance : Coe (Lens' a b) (Getting r a b) where
-  coe a := a (Const r)
+def Getting r s a := (a → Const r a) → s → Const r s
 
-instance : Coe (Traversal' a b) (Getting r a b) where
+instance : Coe (Lens' a b) (∀ r, Getting r a b) where
+  coe a := fun r => a (Const r)
+
+instance [Inhabited r] [Append r] : Coe (Traversal' a b) (Getting r a b) where
   coe a := a (Const r)
 
 def ASetter s t a b := (a → Id b) → s → Id t
@@ -74,22 +87,55 @@ def over (setter: Lens s t a b) (upd: a → b): s → t :=
 def set (setter: Lens s t a b) (v: b): s → t :=
   Id.run ∘ setter Id (fun _ => pure v)
 
+def gset (setter: ASetter s t a b) (v: b): s → t :=
+  Id.run ∘ setter (fun _ => pure v)
+
 def view (getting: Lens' s a): s → a := Const.get ∘ getting (Const a) Const.mk
 
 def fview {s a} := flip (@view s a)
+
+def fold_map_of [Append r] [Inhabited r] (l: Traversal' s a) (f: a → r) :=
+  Const.get ∘ l _ (Const.mk ∘ f)
+
+def foldr_of (l: Traversal' s a) (f: a → r → r) (z: r) :=
+  flip Endo.app z ∘ fold_map_of l (Endo.mk ∘ f)
+
+def to_list_of (l: Traversal' s a) :=
+  foldr_of l List.cons []
+
+def fto_list_of {a s} := flip (@to_list_of a s)
 
 class LawfulLens (l : Lens' s a) : Prop where
   view_set : ∀ s v, view l (set l v s) = v
   set_view : ∀ s, set l (view l s) s = s
   set_set : ∀ s v v', set l v' (set l v s) = set l v' s
 
-def comp (f : Lens s t a b) (g : Lens a b x y): Lens s t x y :=
-  fun F [Functor F] => f F ∘ g F
+class Composable4 (T: Type _ → Type _ → Type _ → Type _ → Type _) where
+  comp4 (f : T s t a b) (g : T a b x y) : T s t x y
 
-infixr:90 "⊚" => comp
-infixr:90 "∘∘" => comp
+class Composable2 (T: Type _ → Type _ → Type _) where
+  comp (f : T s a) (g : T a x) : T s x
+
+instance : Composable4 Lens where
+  comp4 f g := fun F => f F ∘ g F
+
+instance : Composable4 Traversal where
+  comp4 f g := fun F => f F ∘ g F
+
+instance : Composable4 ASetter where
+  comp4 f g := f ∘ g
+
+instance [Composable4 T] : Composable2 (fun a b => T a a b b) where
+  comp := Composable4.comp4
+
+instance : Composable2 (Getting r) where
+  comp f g := f ∘ g
+
+infixr:90 "⊚" => Composable2.comp
+infixr:90 "∘∘" => Composable4.comp4
 
 infix:60 "^." => fview
+infix:60 "^.." => fto_list_of
 
 --------------------------------------------------------------------------------
 
@@ -188,33 +234,38 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             set_view := $(freshName "_set_view") $names:ident*)
       let comp_view_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_view") $names:ident* :
-            ∀ α s (g : Lens' _ α), @view _ _ ($appliedLens ⊚ g) s = @view _ _ g (@view _ _ $appliedLens s) := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
+            ∀ α s (g : Lens' _ α), @view _ _ ($appliedLens ∘∘ g) s = @view _ _ g (@view _ _ $appliedLens s) := by
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
+                 , $fieldNameIdent:ident])
       let comp_set_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_set") $names:ident* :
             ∀ α v s (g : Lens' _ α),
-              @set _ _ _ _ ($appliedLens ⊚ g) v s
+              @set _ _ _ _ (@Composable2.comp Lens' _ _ _ α $appliedLens g) v s
               = @set _ _ _ _ $appliedLens (@set _ _ _ _ g v (@view _ _ $appliedLens s)) s := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
+                 , $fieldNameIdent:ident])
       let view_set_comp_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp") $names:ident* :
             ∀ x y v s (f: Lens' _ x) (g: Lens' _ y),
-              @view _ _ ($appliedLens ⊚ f)
-                (@set _ _ _ _ ($appliedLens ⊚ g) v s)
+              @view _ _ ($appliedLens ∘∘ f)
+                (@set _ _ _ _ (Composable2.comp Lens' _ _ _ y $appliedLens g) v s)
               = @view _ _ f (@set _ _ y y g v (@view _ _ $appliedLens s)) := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
+                 , $fieldNameIdent:ident])
       let view_set_comp2_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp2") $names:ident* :
             ∀ y v s (g: Lens' _ y),
-              @view _ _ $appliedLens (@set _ _ _ _ ($appliedLens ⊚ g) v s)
+              @view _ _ $appliedLens (@set _ _ _ _ (@Composable2.comp Lens' _ _ _ y $appliedLens g) v s)
               = @set _ _ y y g v (@view _ _ $appliedLens s) := by
-              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
+              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
+                   , $fieldNameIdent:ident])
       let view_set_comp3_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp3") $names:ident* :
             ∀ y v s (g: Lens' _ y),
-              @view _ _ ($appliedLens ⊚ g) (@set _ _ _ _ $appliedLens v s)
+              @view _ _ ($appliedLens ∘∘ g) (@set _ _ _ _ $appliedLens v s)
               = @view _ _ g v := by
-              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $fieldNameIdent:ident])
+              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
+                   , $fieldNameIdent:ident])
       trace[debug] "{defn}"
       trace[debug] "{view_set_lemma}"
       trace[debug] "{set_set_lemma}"
@@ -256,23 +307,26 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp"):ident $names:ident* :
                 ∀ x v s (f: Lens' _ x),
                   @view _ _ $main_lens
-                    (@set _ _ _ _ ($other_lens ⊚ f) v s)
+                    (@set _ _ _ _ (@Composable2.comp Lens' _ _ _ x $other_lens f) v s)
                   = @view _ _ $main_lens s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $main_ident:ident, $other_ident:ident])
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
+                       , $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma2 ←
             `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
                 ∀ x y v s (g: Lens' _ y) (f: Lens' _ x),
-                  @view _ _ ($main_lens ⊚ g)
-                    (@set _ _ _ _ ($other_lens ⊚ f) v s)
-                  = @view _ _ ($main_lens ⊚ g) s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $main_ident:ident, $other_ident:ident])
+                  @view _ _ ($main_lens ∘∘ g)
+                    (@set _ _ _ _ (@Composable2.comp Lens' _ _ _ x $other_lens f) v s)
+                  = @view _ _ ($main_lens ∘∘ g) s := by
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
+                       , $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma3 ←
             `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
                 ∀ y v s (g: Lens' _ y),
-                  @view _ _ ($main_lens ⊚ g)
+                  @view _ _ ($main_lens ∘∘ g)
                     (@set _ _ _ _ $other_lens v s)
-                  = @view _ _ ($main_lens ⊚ g) s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, comp, $main_ident:ident, $other_ident:ident])
+                  = @view _ _ ($main_lens ∘∘ g) s := by
+                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
+                       , $main_ident:ident, $other_ident:ident])
           trace[debug] "{contr_set_view_lemma}"
           trace[debug] "{contr_set_view_comp_lemma2}"
           trace[debug] "{contr_set_view_comp_lemma3}"
@@ -282,7 +336,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           --elabCommand <| contr_set_view_comp_lemma3
   | _ => throwUnsupportedSyntax
 
-def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n -> a) : Fin n -> a :=
+def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n → a) : Fin n → a :=
   fun i =>
     if i == i' then
       e
@@ -290,21 +344,55 @@ def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n -> a) : Fin n -> a :=
       f i
 
 @[simp]
-theorem update_Fin_gso {a: Type} (i i' : Fin n)  (e : a) (f : Fin n -> a) :
-  ¬(i = i') -> update_Fin i' e f i = f i := by intro h1; simp [update_Fin, h1]
+theorem update_Fin_gso {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
+  ¬(i = i') → update_Fin i' e f i = f i := by intro h1; simp [update_Fin, h1]
 
 @[simp]
-theorem update_Fin_gso2 {a: Type} (i i' : Fin n)  (e : a) (f : Fin n -> a) :
-  ¬(i' = i) -> update_Fin i' e f i = f i := by
+theorem update_Fin_gso2 {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
+  ¬(i' = i) → update_Fin i' e f i = f i := by
     intro h1
     have h1 := Ne.symm h1
     simp [Ne, *]
 
 @[simp]
-theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n -> a) :
+theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
   update_Fin i e f i  = e := by simp [update_Fin]
 
 def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
   lens' (fun a => a i) (fun a b => update_Fin i b a)
+
+def liftA2 [Applicative F] (f: a → b → c) (x: F a) (y: F b) :=
+  (f <$> x) <*> y
+
+def traverse_list' [Applicative F] (f: a → F b) : List a → F (List b) :=
+  List.foldr cons_f (pure [])
+  where cons_f x ys := liftA2 List.cons (f x) ys
+
+def traverse_list : Traversal' (List a) a :=
+  fun F _ inst2 => @traverse_list' F _ _ inst2
+
+def range (n : Nat) : List (Fin n) :=
+  loop n (Nat.le_of_eq (Eq.refl n)) []
+where
+  loop : (y:Nat) → y <= n → List (Fin n) → List (Fin n)
+  | 0,   _,  ns => ns
+  | n+1, lt, ns => let ltn := Nat.lt_of_succ_le lt; loop n (Nat.le_of_lt ltn) ({val := n, isLt := ltn}::ns)
+
+def traverse_Fin' [Inhabited b] [Applicative F] (f: a → F b) (l: Fin n → a): F (Fin n → b) :=
+  List.foldr cons_r (pure (fun _ => default)) (range n)
+  where cons_r x ys := liftA2 (update_Fin x) (f (l x)) ys
+
+def traverse_Fin'' [Inhabited b] [Applicative F] (f: Nat → a → F b) (l: Fin n → a): F (Fin n → b) :=
+  List.foldr cons_r (pure (fun _ => default)) (range n)
+  where cons_r x ys := liftA2 (update_Fin x) (f x (l x)) ys
+
+def traverse_Fin {n} {a} [Inhabited a] : Traversal' (Fin n → a) a :=
+  fun _ => traverse_Fin'
+
+def set_Fin {n} {a} [Inhabited a] : ASetter' (Fin n → a) a := @traverse_Fin n a _
+
+#eval (fun (x:Fin 5) => if x == 2 then 3 else 4) ^.. traverse_Fin
+
+#eval ((gset set_Fin 1 (fun (x:Fin 5) => if x == 2 then 3 else 4))) ^.. traverse_Fin
 
 end Leanses

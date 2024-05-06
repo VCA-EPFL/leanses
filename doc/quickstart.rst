@@ -1,7 +1,7 @@
 Quickstart
 ==========
 
-Lens implementation for Lean with custom update notation and pretty-printing.  Updates can also be hidden using ``pp.hideLensUpdates``.  Using lenses provides a more flexible record update syntax that can be manipulated to provide better pretty-printing of such updates.
+Leanses provides a way to automatically generate lenses from a structure using ``mklenses``.
 
 .. code-block:: lean
 

@@ -1,17 +1,10 @@
-.. Leanses documentation master file, created by
-   sphinx-quickstart on Thu May  2 14:24:19 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-  ::
-
 Leanses
 =======
 
-A lens library for Lean 4.
+Lens implementation for Lean 4 with custom update notation and pretty-printing.  Updates can also be hidden using ``pp.hideLensUpdates``.  Using lenses provides a more flexible record update syntax that can be manipulated to provide better pretty-printing of such updates.
 
 .. toctree::
   :hidden:
 
   quickstart
-  lens
+  Leanses/lens
