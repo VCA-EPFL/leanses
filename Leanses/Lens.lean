@@ -131,6 +131,8 @@ instance [Composable4 T] : Composable2 (fun a b => T a a b b) where
 instance : Composable2 (Getting r) where
   comp f g := f ∘ g
 
+def comp {t a b} [tinst : Composable2 t] := @Composable2.comp t tinst a b
+
 infixr:90 "⊚" => Composable2.comp
 infixr:90 "∘∘" => Composable4.comp4
 
