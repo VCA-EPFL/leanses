@@ -11,4 +11,6 @@ register_option pp.zeroLensUpdates : Bool := {
   descr := "Hide the lense updates"
 }
 
+initialize Lean.registerTraceClass `Leanses.traceNames
+
 declare_aesop_rule_sets [lens]

@@ -215,6 +215,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       let appliedLens ← `((@$fieldNameIdent $names:ident*))
       let defn ← `(def $fieldNameIdent $names:ident* := @lens' _ _ $accessor $setter)
       trace[debug] "{defn}"
+      trace[traceName] "{freshName "_view_set"}"
       let view_set_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set") $names:ident* :
             ∀ s v,
@@ -222,11 +223,13 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                 $appliedLens (@set _ _ _ _ $appliedLens v s) = v := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       trace[debug] "{view_set_lemma}"
+      trace[traceName] "{freshName "_set_set"}"
       let set_set_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_set_set") $names:ident* :
             ∀ s v v', @set _ _ _ _ $appliedLens v' (@set _ _ _ _ $appliedLens v s)
                       = @set _ _ _ _ $appliedLens v' s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
+      trace[traceName] "{freshName "_set_view"}"
       let set_view_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_set_view") $names:ident* :
             ∀ s, @set _ _ _ _ $appliedLens (@view _ _ $appliedLens s) s = s := by
@@ -236,6 +239,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             view_set := $(freshName "_view_set") $names:ident*
             set_set := $(freshName "_set_set") $names:ident*
             set_view := $(freshName "_set_view") $names:ident*)
+      trace[traceName] "{freshName "_comp_view"}"
       let comp_view_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_view") $names:ident* :
             ∀ α s (g : Lens' _ α), @view _ _ ($appliedLens ∘∘ g) s = @view _ _ g (@view _ _ $appliedLens s) := by
@@ -256,6 +260,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
               = @view _ _ f (@set _ _ y y g v (@view _ _ $appliedLens s)) := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
                  , $fieldNameIdent:ident])
+      trace[traceName] "{freshName "_view_set_comp2"}"
       let view_set_comp2_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp2") $names:ident* :
             ∀ y v s (g: Lens' _ y),
@@ -300,6 +305,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           let other_ident := mkIdent $ name' ++ "l" ++ other_field.fieldName
           let other_lens ← `((@$other_ident $names:ident*))
           let freshName' := freshName ("_" ++ toString other_field.fieldName)
+          trace[traceName] "{freshName' "_set_view"}"
           let contr_set_view_lemma ←
             `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view"):ident $names:ident* :
                 ∀ v s,
@@ -307,6 +313,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                     (@set _ _ _ _ $other_lens v s)
                   = @view _ _ $main_lens s := by
                   simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
+          trace[traceName] "{freshName' "_set_view_comp"}"
           let contr_set_view_comp_lemma ←
             `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp"):ident $names:ident* :
                 ∀ x v s (f: Lens' _ x),
