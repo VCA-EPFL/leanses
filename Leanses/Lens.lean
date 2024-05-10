@@ -354,9 +354,9 @@ def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n → a) : Fin n → a :=
     else
       f i
 
-@[aesop norm (rule_sets := [lens])] 
+@[aesop norm (rule_sets := [lens])]
 theorem fview_view a b:
-  @fview x y b a = @view x y a b := by 
+  @fview x y b a = @view x y a b := by
   simp [fview, flip]
 
 @[aesop norm (rule_sets := [lens])]
@@ -377,22 +377,39 @@ theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
 def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
   lens' (fun a => a i) (fun a b => update_Fin i b a)
 
-@[aesop norm (rule_sets := [lens])] 
+@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss :
   view (fin_at n) (set (fin_at n) x y) = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
 
-@[aesop norm (rule_sets := [lens])] 
+@[aesop norm (rule_sets := [lens])]
+theorem fin_at_gss_comp :
+  view (fin_at n) (set (fin_at n∘∘g) x y) = set g x (view (fin_at n) y) := by
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable2.comp,Composable4.comp4]
+
+@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso :
   ¬ n = m → view (fin_at n) (set (fin_at m) x y) = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
 
-@[aesop norm (rule_sets := [lens])] 
+@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2 :
   ¬ m = n → view (fin_at n) (set (fin_at m) x y) = y n := by
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
+
+@[aesop norm (rule_sets := [lens])]
+theorem fin_at_gso2_comp :
+  ¬ m = n → view (fin_at n) (set (fin_at m∘∘g) x y) = y n := by
+  intros h1
+  have := Ne.symm h1
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
+
+@[aesop norm (rule_sets := [lens])]
+theorem fin_at_gso_comp :
+  ¬ n = m → view (fin_at n) (set (fin_at m∘∘g) x y) = y n := by
+  intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
 
 def liftA2 [Applicative F] (f: a → b → c) (x: F a) (y: F b) :=
   (f <$> x) <*> y
@@ -422,7 +439,7 @@ def traverse_Fin'' [Inhabited b] [Applicative F] (f: Nat → a → F b) (l: Fin 
 def traverse_Fin {n} {a} [Inhabited a] : Traversal' (Fin n → a) a :=
   fun _ => traverse_Fin'
 
-@[simp] 
+@[simp]
 def set_Fin {n} {a} [Inhabited a] : ASetter' (Fin n → a) a := @traverse_Fin n a _
 
 #eval (fun (x:Fin 5) => if x == 2 then 3 else 4) ^.. traverse_Fin

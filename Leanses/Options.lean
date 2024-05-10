@@ -12,5 +12,6 @@ register_option pp.zeroLensUpdates : Bool := {
 }
 
 initialize Lean.registerTraceClass `Leanses.traceNames
+initialize Lean.registerTraceClass `Leanses.debug
 
 declare_aesop_rule_sets [lens]
