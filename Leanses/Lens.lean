@@ -412,6 +412,16 @@ theorem fin_at_gso_comp :
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
 
 @[aesop norm (rule_sets := [lens])]
+theorem fin_at_apply :
+  y n = view (fin_at n) y := by
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
+
+@[aesop norm (rule_sets := [lens])]
+theorem fin_at_apply2 :
+  view g (y n) = view (fin_at n∘∘g) y := by
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
+
+@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss2 :
   (set (fin_at n) x y) n = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
