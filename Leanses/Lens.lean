@@ -412,6 +412,30 @@ theorem fin_at_gso_comp :
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
 
 @[aesop norm (rule_sets := [lens])]
+theorem fin_at_gso_app :
+  ¬ n = m → (set (fin_at m) x y) n = y n := by
+  intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
+
+@[aesop norm (rule_sets := [lens])]
+theorem fin_at_gso2_app :
+  ¬ m = n → (set (fin_at m) x y) n = y n := by
+  intros h1
+  have := Ne.symm h1
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
+
+@[aesop norm (rule_sets := [lens])]
+theorem fin_at_gso2_comp_app :
+  ¬ m = n → (set (fin_at m∘∘g) x y) n = y n := by
+  intros h1
+  have := Ne.symm h1
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
+
+@[aesop norm (rule_sets := [lens])]
+theorem fin_at_gso_comp_app :
+  ¬ n = m → (set (fin_at m∘∘g) x y) n = y n := by
+  intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
+
+@[aesop norm (rule_sets := [lens])]
 theorem fin_at_apply :
   view (fin_at n) y = y n := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
