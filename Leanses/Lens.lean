@@ -416,6 +416,11 @@ theorem fin_at_gss2 :
   (set (fin_at n) x y) n = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
 
+@[aesop norm (rule_sets := [lens])]
+theorem fin_at_gss2_comp :
+  (set (fin_at n∘∘g) x y) n = set g x (y n) := by
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
+
 def liftA2 [Applicative F] (f: a → b → c) (x: F a) (y: F b) :=
   (f <$> x) <*> y
 
