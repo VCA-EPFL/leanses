@@ -146,10 +146,16 @@ infix:60 "^.." => fto_list_of
 syntax (priority := high) "<{ " term " with " (term " := " term),+ " }>" : term
 syntax (priority := high) "<{ " term " ... }>" : term
 
+syntax (priority := high) "<{ " term " | " term ("." term)* " }>" : term
+
 macro_rules
   | `(<{$y with $x := $z}>) => `(set $x $z $y)
   | `(<{$y with $x := $z, $[$xs:term := $zs:term],*}>) =>
     `(set $x $z (<{ $y with $[$xs:term := $zs:term],* }>))
+
+macro_rules
+  | `(<{ $y | $x }>) => `(view $x $y)
+  | `(<{ $y | $x . $z $[. $w]* }>) => `(view $x <{ $y | $z $[. $w]* }> )
 
 @[app_unexpander Leanses.set]
 def unexpanderSet : Lean.PrettyPrinter.Unexpander
@@ -157,6 +163,14 @@ def unexpanderSet : Lean.PrettyPrinter.Unexpander
     `(<{ $rest:term with $lens:term := $item:term, $[$xs:term := $zs:term],* }>)
   | `($(_) $lens:term $item:term $rest:term) =>
     `(<{ $rest:term with $lens:term := $item:term }>)
+  | _ => throw ()
+
+@[app_unexpander Leanses.view]
+def unexpanderView : Lean.PrettyPrinter.Unexpander
+  | `($(_) $lens:term <{ $rest:term | $a:term $[. $z:term]* }>) =>
+    `(<{ $rest:term | $lens:term . $a:term $[. $z:term]* }>)
+  | `($(_) $lens:term $rest:term) =>
+    `(<{ $rest:term | $lens:term }>)
   | _ => throw ()
 
 open Lean Meta PrettyPrinter Delaborator SubExpr in
