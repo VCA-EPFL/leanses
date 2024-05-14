@@ -37,7 +37,7 @@ def getUnfoldTheorems : MetaM SimpTheorems := do
   let rlist := lens_ext_unfold.getState (← getEnv)
   let mut s : SimpTheorems := {}
   for name in rlist do
-    s ← s.addConst name
+    s ← s.addDeclToUnfold name
   return s
 
 open Lean.Elab.Tactic in

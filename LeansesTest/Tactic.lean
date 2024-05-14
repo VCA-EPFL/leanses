@@ -31,4 +31,8 @@ example (str:Example n):
   i ≠ j → <{ str with s3 n∘∘c n∘∘fin_at j := "Random" }>^.s3 n∘∘c n∘∘fin_at i = str^.s3 n∘∘c n∘∘fin_at i := by
   intros h; simp_lens (discharger := assumption); rfl
 
+example (str:Example n):
+  i ≠ j → <{ str with s3 n∘∘c n∘∘fin_at j := "Random" }>^.s3 n∘∘c n∘∘fin_at i = str^.s3 n∘∘c n∘∘fin_at i := by
+  intros; unfold_lens; simp [*, update_Fin_gso]
+
 end LeansesTest.Tactic.Test1

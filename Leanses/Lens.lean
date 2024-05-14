@@ -195,6 +195,14 @@ addlensunfoldrule lens'
 addlensunfoldrule lens
 addlensunfoldrule Id.run
 addlensunfoldrule Const.get
+addlensunfoldrule fview
+addlensunfoldrule over
+addlensunfoldrule comp
+addlensunfoldrule Composable2.comp
+addlensunfoldrule Composable4.comp4
+addlensunfoldrule flip
+addlensunfoldrule Function.comp
+addlensunfoldrule pure
 
 syntax (name := mkLens) "mklenses" ident : command
 
