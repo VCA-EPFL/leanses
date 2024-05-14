@@ -1,6 +1,6 @@
 import Leanses
 
-namespace Test1
+namespace LeansesTest.Lens.Test1
 
 structure SubEx where
   c : String
@@ -67,35 +67,12 @@ info: <{ v ... }> : Example
 #guard_msgs in
 #check <{ v with s3∘∘c := "deep", s1 := "c" }>
 
-end Test1
+end LeansesTest.Lens.Test1
 
-namespace Test2
+namespace LeansesTest.Lens.Test2
 
-structure SubEx (n : Nat) where
-  c : Fin n → String
+#eval (fun (x:Fin 5) => if x == 2 then 3 else 4) ^.. traverse_Fin
 
--- `mklenses` automatically generates lenses for a structure.
-mklenses SubEx
-open SubEx.l
+#eval ((gset set_Fin 1 (fun (x:Fin 5) => if x == 2 then 3 else 4))) ^.. traverse_Fin
 
-structure Example (n : Nat) where
-  s1 : String
-  s2 : Int
-  s3 : SubEx n
-
-mklenses Example
-open Example.l
-
-example (str:Example n):
-  <{ str with s3 n∘∘c n∘∘Leanses.fin_at j := "Random" }>^.s3 n∘∘c n∘∘Leanses.fin_at j = "Random" := by
-  simp_lens
-
-example (str:Example n):
-  i = j → <{ str with s2 n := 3, s3 n∘∘c n∘∘Leanses.fin_at j := "Random" }>^.s3 n∘∘c n∘∘Leanses.fin_at i = "Random" := by
-  simp_lens
-
-example (str:Example n):
-  i ≠ j → <{ str with s3 n∘∘c n∘∘Leanses.fin_at j := "Random" }>^.s3 n∘∘c n∘∘Leanses.fin_at i = str^.s3 n∘∘c n∘∘Leanses.fin_at i := by
-  simp_lens
-
-end Test2
+end LeansesTest.Lens.Test2

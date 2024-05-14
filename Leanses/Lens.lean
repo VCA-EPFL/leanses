@@ -6,9 +6,9 @@ import Aesop
 
 namespace Leanses
 
-syntax "simp_lens" : tactic
+syntax "aesop_lens" : tactic
 macro_rules
-  | `(tactic| simp_lens) => `(tactic| aesop (rule_sets := [lens]) )
+  | `(tactic| aesop_lens) => `(tactic| aesop (rule_sets := [lens]) )
 
 structure Const (α β: Type _) where
   get : α
@@ -286,13 +286,18 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       trace[debug] "{view_set_comp3_lemma}"
       elabCommand <| defn
       elabCommand <| view_set_lemma
+      elabCommand <| ← `(addlensrule $(freshName "_view_set"):ident)
       elabCommand <| set_set_lemma
+      elabCommand <| ← `(addlensrule $(freshName "_set_set"):ident)
       elabCommand <| set_view_lemma
+      elabCommand <| ← `(addlensrule $(freshName "_set_view"):ident)
       elabCommand <| lawful_lens_instance
       elabCommand <| comp_view_lemma
+      elabCommand <| ← `(addlensrule $(freshName "_comp_view"):ident)
       --elabCommand <| comp_set_lemma
       --elabCommand <| view_set_comp_lemma
       elabCommand <| view_set_comp2_lemma
+      elabCommand <| ← `(addlensrule $(freshName "_view_set_comp2"):ident)
       --elabCommand <| view_set_comp3_lemma
     for main_field in info.fieldInfo do
       let main_ident := mkIdent $ name' ++ "l" ++ main_field.fieldName
@@ -342,7 +347,9 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           trace[debug] "{contr_set_view_comp_lemma2}"
           trace[debug] "{contr_set_view_comp_lemma3}"
           elabCommand <| contr_set_view_lemma
+          elabCommand <| ← `(addlensrule $(freshName' "_set_view"):ident)
           elabCommand <| contr_set_view_comp_lemma
+          elabCommand <| ← `(addlensrule $(freshName' "_set_view_comp"):ident)
           --elabCommand <| contr_set_view_comp_lemma2
           --elabCommand <| contr_set_view_comp_lemma3
   | _ => throwUnsupportedSyntax
@@ -358,6 +365,7 @@ def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n → a) : Fin n → a :=
 theorem fview_view a b:
   @fview x y b a = @view x y a b := by
   simp [fview, flip]
+addlensrule fview_view
 
 @[aesop norm (rule_sets := [lens])]
 theorem update_Fin_gso {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
@@ -368,7 +376,7 @@ theorem update_Fin_gso2 {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
   ¬(i' = i) → update_Fin i' e f i = f i := by
     intro h1
     have h1 := Ne.symm h1
-    simp_lens
+    aesop_lens
 
 @[aesop norm (rule_sets := [lens])]
 theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
@@ -381,16 +389,19 @@ def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
 theorem fin_at_gss :
   view (fin_at n) (set (fin_at n) x y) = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
+addlensrule fin_at_gss
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss_comp :
   view (fin_at n) (set (fin_at n∘∘g) x y) = set g x (view (fin_at n) y) := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable2.comp,Composable4.comp4]
+addlensrule fin_at_gss_comp
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso :
   ¬ n = m → view (fin_at n) (set (fin_at m) x y) = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
+addlensrule fin_at_gso
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2 :
@@ -398,6 +409,7 @@ theorem fin_at_gso2 :
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
+addlensrule fin_at_gso2
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2_comp :
@@ -405,16 +417,19 @@ theorem fin_at_gso2_comp :
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
+addlensrule fin_at_gso2_comp
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso_comp :
   ¬ n = m → view (fin_at n) (set (fin_at m∘∘g) x y) = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
+addlensrule fin_at_gso_comp
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso_app :
   ¬ n = m → (set (fin_at m) x y) n = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
+addlensrule fin_at_gso_app
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2_app :
@@ -422,6 +437,7 @@ theorem fin_at_gso2_app :
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
+addlensrule fin_at_gso2_app
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2_comp_app :
@@ -429,26 +445,31 @@ theorem fin_at_gso2_comp_app :
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
+addlensrule fin_at_gso2_comp_app
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso_comp_app :
   ¬ n = m → (set (fin_at m∘∘g) x y) n = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
+addlensrule fin_at_gso_comp_app
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_apply :
   view (fin_at n) y = y n := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
+addlensrule fin_at_apply
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss2 :
   (set (fin_at n) x y) n = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
+addlensrule fin_at_gss2
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss2_comp :
   (set (fin_at n∘∘g) x y) n = set g x (y n) := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
+addlensrule fin_at_gss2_comp
 
 def liftA2 [Applicative F] (f: a → b → c) (x: F a) (y: F b) :=
   (f <$> x) <*> y
@@ -480,9 +501,5 @@ def traverse_Fin {n} {a} [Inhabited a] : Traversal' (Fin n → a) a :=
 
 @[simp]
 def set_Fin {n} {a} [Inhabited a] : ASetter' (Fin n → a) a := @traverse_Fin n a _
-
-#eval (fun (x:Fin 5) => if x == 2 then 3 else 4) ^.. traverse_Fin
-
-#eval ((gset set_Fin 1 (fun (x:Fin 5) => if x == 2 then 3 else 4))) ^.. traverse_Fin
 
 end Leanses
