@@ -188,6 +188,14 @@ def generateFreshNamesAux (x : Expr) (arr : Array (TSyntax `ident)) : CoreM (Arr
 
 def generateFreshNames (x : Expr) : CoreM (Array (TSyntax `ident)) := generateFreshNamesAux x default
 
+addlensunfoldrule view
+addlensunfoldrule set
+addlensunfoldrule Functor.map
+addlensunfoldrule lens'
+addlensunfoldrule lens
+addlensunfoldrule Id.run
+addlensunfoldrule Const.get
+
 syntax (name := mkLens) "mklenses" ident : command
 
 open Lean Meta PrettyPrinter Delaborator SubExpr Core in
@@ -285,6 +293,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       trace[debug] "{view_set_comp_lemma}"
       trace[debug] "{view_set_comp3_lemma}"
       elabCommand <| defn
+      elabCommand <| ← `(addlensunfoldrule $fieldNameIdent:ident)
       elabCommand <| view_set_lemma
       elabCommand <| ← `(addlensrule $(freshName "_view_set"):ident)
       elabCommand <| set_set_lemma
@@ -384,6 +393,7 @@ theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
 
 def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
   lens' (fun a => a i) (fun a b => update_Fin i b a)
+addlensunfoldrule fin_at
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss :
