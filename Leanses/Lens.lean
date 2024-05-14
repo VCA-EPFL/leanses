@@ -471,6 +471,12 @@ theorem fin_at_gss2_comp :
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
 addlensrule fin_at_gss2_comp
 
+@[aesop norm (rule_sets := [lens])]
+theorem fin_at_view_comp :
+  view (fin_at n∘∘g) x = view g (view (fin_at n) x) := by
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
+addlensrule fin_at_view_comp
+
 def liftA2 [Applicative F] (f: a → b → c) (x: F a) (y: F b) :=
   (f <$> x) <*> y
 
