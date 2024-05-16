@@ -398,18 +398,18 @@ theorem fview_view a b:
   simp [fview, flip]
 addlensrule fview_view
 
-@[aesop norm (rule_sets := [lens])]
+@[simp]
 theorem update_Fin_gso {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
   ¬(i = i') → update_Fin i' e f i = f i := by intro h1; simp [update_Fin, h1]
 
-@[aesop norm (rule_sets := [lens])]
+@[simp]
 theorem update_Fin_gso2 {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
   ¬(i' = i) → update_Fin i' e f i = f i := by
     intro h1
     have h1 := Ne.symm h1
     aesop_lens
 
-@[aesop norm (rule_sets := [lens])]
+@[simp]
 theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
   update_Fin i e f i  = e := by simp [update_Fin]
 
