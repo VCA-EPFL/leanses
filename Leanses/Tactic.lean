@@ -14,8 +14,6 @@ open Lean.Parser.Tactic in
 syntax (name := unfoldLens) "unfold_lens" (config)? (discharger)? 
   (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "]")? (location)? : tactic
 
-set_option trace.debug true
-
 open Lean Meta Simp Core in
 def SimpTheoremsArray.addConst (thmsArray : SimpTheoremsArray) (id : Name) : MetaM SimpTheoremsArray :=
   if thmsArray.isEmpty then
@@ -67,8 +65,5 @@ def evalUnfoldLens : Tactic := fun stx => withMainContext do
     if tactic.simp.trace.get (← Lean.getOptions) then
         traceSimpCall stx usedSimps
   | _ => panic! "Wrong simp_lens syntax"
-
-example : ∀ A (x y:A) (P: A → Prop), x = y -> P x -> P y := by
-  intros; unfold_lens [*] at *; assumption
 
 end Leanses

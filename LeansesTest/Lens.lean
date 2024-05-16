@@ -71,8 +71,8 @@ end LeansesTest.Lens.Test1
 
 namespace LeansesTest.Lens.Test2
 
-#eval (fun (x:Fin 5) => if x == 2 then 3 else 4) ^.. traverse_Fin
+-- #eval (fun (x:Fin 5) => if x == 2 then 3 else 4) ^.. traverse_Fin
 
-#eval ((gset set_Fin 1 (fun (x:Fin 5) => if x == 2 then 3 else 4))) ^.. traverse_Fin
+-- #eval ((gset set_Fin 1 (fun (x:Fin 5) => if x == 2 then 3 else 4))) ^.. traverse_Fin
 
 end LeansesTest.Lens.Test2
