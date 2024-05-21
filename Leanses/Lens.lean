@@ -165,13 +165,13 @@ def unexpanderSet : Lean.PrettyPrinter.Unexpander
     `(<{ $rest:term with $lens:term := $item:term }>)
   | _ => throw ()
 
-@[app_unexpander Leanses.view]
-def unexpanderView : Lean.PrettyPrinter.Unexpander
-  | `($(_) $lens:term <{ $rest:term | $a:term $[. $z:term]* }>) =>
-    `(<{ $rest:term | $lens:term . $a:term $[. $z:term]* }>)
-  | `($(_) $lens:term $rest:term) =>
-    `(<{ $rest:term | $lens:term }>)
-  | _ => throw ()
+--@[app_unexpander Leanses.view]
+--def unexpanderView : Lean.PrettyPrinter.Unexpander
+--  | `($(_) $lens:term <{ $rest:term | $a:term $[. $z:term]* }>) =>
+--    `(<{ $rest:term | $lens:term . $a:term $[. $z:term]* }>)
+--  | `($(_) $lens:term $rest:term) =>
+--    `(<{ $rest:term | $lens:term }>)
+--  | _ => throw ()
 
 open Lean Meta PrettyPrinter Delaborator SubExpr in
 @[delab app.Leanses.set] def delabExpandSet : Delab := do
@@ -431,13 +431,13 @@ addlensrule fin_at_gss_comp
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso :
-  ¬ n = m → view (fin_at n) (set (fin_at m) x y) = y n := by
+  ¬ n = m → view (fin_at n) (set (fin_at m) x y) = view (fin_at n) y := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
 addlensrule fin_at_gso
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2 :
-  ¬ m = n → view (fin_at n) (set (fin_at m) x y) = y n := by
+  ¬ m = n → view (fin_at n) (set (fin_at m) x y) = view (fin_at n) y := by
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
@@ -445,7 +445,7 @@ addlensrule fin_at_gso2
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2_comp :
-  ¬ m = n → view (fin_at n) (set (fin_at m∘∘g) x y) = y n := by
+  ¬ m = n → view (fin_at n) (set (fin_at m∘∘g) x y) = view (fin_at n) y := by
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
@@ -453,7 +453,7 @@ addlensrule fin_at_gso2_comp
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso_comp :
-  ¬ n = m → view (fin_at n) (set (fin_at m∘∘g) x y) = y n := by
+  ¬ n = m → view (fin_at n) (set (fin_at m∘∘g) x y) = view (fin_at n) y := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
 addlensrule fin_at_gso_comp
 
@@ -461,7 +461,7 @@ addlensrule fin_at_gso_comp
 theorem fin_at_gso_app :
   ¬ n = m → (set (fin_at m) x y) n = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
-addlensrule fin_at_gso_app
+--addlensrule fin_at_gso_app
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2_app :
@@ -469,7 +469,7 @@ theorem fin_at_gso2_app :
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
-addlensrule fin_at_gso2_app
+--addlensrule fin_at_gso2_app
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2_comp_app :
@@ -477,31 +477,31 @@ theorem fin_at_gso2_comp_app :
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
-addlensrule fin_at_gso2_comp_app
+--addlensrule fin_at_gso2_comp_app
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso_comp_app :
   ¬ n = m → (set (fin_at m∘∘g) x y) n = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
-addlensrule fin_at_gso_comp_app
+--addlensrule fin_at_gso_comp_app
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_apply :
   view (fin_at n) y = y n := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
-addlensrule fin_at_apply
+--addlensrule fin_at_apply
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss2 :
   (set (fin_at n) x y) n = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
-addlensrule fin_at_gss2
+--addlensrule fin_at_gss2
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss2_comp :
   (set (fin_at n∘∘g) x y) n = set g x (y n) := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
-addlensrule fin_at_gss2_comp
+--addlensrule fin_at_gss2_comp
 
 @[aesop norm (rule_sets := [lens])]
 theorem fin_at_view_comp :
