@@ -202,6 +202,15 @@ def generateFreshNamesAux (x : Expr) (arr : Array (TSyntax `ident)) : CoreM (Arr
 
 def generateFreshNames (x : Expr) : CoreM (Array (TSyntax `ident)) := generateFreshNamesAux x default
 
+def generateNFreshNamesAux (x : Nat) (arr : Array (TSyntax `ident)) : CoreM (Array (TSyntax `ident)) := do
+  match x with
+  | y + 1 => do
+    let typeName := mkIdent <| ← mkFreshUserName "v"
+    generateNFreshNamesAux y <| arr.push typeName
+  | 0 => pure arr
+
+def generateNFreshNames (x : Nat) : CoreM (Array (TSyntax `ident)) := generateNFreshNamesAux x default
+
 addlensunfoldrule view
 addlensunfoldrule set
 addlensunfoldrule Functor.map
@@ -218,6 +227,12 @@ addlensunfoldrule flip
 addlensunfoldrule Function.comp
 addlensunfoldrule pure
 
+def getConstructors [Monad m] [MonadEnv m] [MonadError m] (constName : Name) : m (Option InductiveVal) := do
+  let cinfo ← getConstInfo constName
+  match cinfo with
+  | ConstantInfo.inductInfo val => return some val
+  | _ => return none
+
 syntax (name := mkLens) "mklenses" ident : command
 
 open Lean Meta PrettyPrinter Delaborator SubExpr Core in
@@ -233,8 +248,18 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
     let env ← getEnv
     let some info := getStructureInfo? env name
       | throwErrorAt i "Not a structure"
+    let some ctorinfo ← getConstructors name
+      | throwErrorAt i "No constructors found"
     trace[debug] "{structureType}"
+    trace[debug] "{ctorinfo.ctors}, {ctorinfo.numParams}, {ctorinfo.numIndices}"
+    let [ctorname] := ctorinfo.ctors
+      | throwErrorAt i "Inductive types not supported"
+    let freshFieldNameVars ← liftCoreM <| generateNFreshNames info.fieldNames.size
     for field in info.fieldInfo do
+      let some field_idx := info.fieldNames.indexOf? field.fieldName
+        | throwErrorAt i "Could not find field name index"
+      let field_fresh_var := freshFieldNameVars.get! field_idx
+      trace[debug] "field_idx: {field_idx}"
       trace[debug] "{repr field}"
       let fieldNameIdent := mkIdent $ name' ++ "l" ++ field.fieldName
       let fieldNameIdent' := mkIdent field.fieldName
@@ -269,6 +294,11 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             view_set := $(freshName "_view_set") $names:ident*
             set_set := $(freshName "_set_set") $names:ident*
             set_view := $(freshName "_set_view") $names:ident*)
+      let view_constr_lemma ←
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_constr") $names:ident* :
+            ∀ $freshFieldNameVars:ident*, @view _ _ $appliedLens (@$(mkIdent ctorname):ident $(names ++ freshFieldNameVars):ident*) = $field_fresh_var:ident := by
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
+                 , $fieldNameIdent:ident])
       trace[Leanses.traceNames] "{freshName "_comp_view"}"
       let comp_view_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_view") $names:ident* :
@@ -314,6 +344,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       trace[debug] "{comp_set_lemma}"
       trace[debug] "{view_set_comp_lemma}"
       trace[debug] "{view_set_comp3_lemma}"
+      trace[debug] "{view_constr_lemma}"
       elabCommand <| defn
       elabCommand <| ← `(addlensunfoldrule $fieldNameIdent:ident)
       elabCommand <| view_set_lemma
@@ -323,6 +354,8 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       elabCommand <| set_view_lemma
       elabCommand <| ← `(addlensrule $(freshName "_set_view"):ident)
       elabCommand <| lawful_lens_instance
+      elabCommand <| view_constr_lemma
+      elabCommand <| ← `(addlensrule $(freshName "_view_constr"):ident)
       elabCommand <| comp_view_lemma
       elabCommand <| ← `(addlensrule $(freshName "_comp_view"):ident)
       --elabCommand <| comp_set_lemma
