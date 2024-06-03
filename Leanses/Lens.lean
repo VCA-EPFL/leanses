@@ -195,7 +195,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr in
 def generateFreshNamesAux (x : Expr) (arr : Array (TSyntax `ident)) : CoreM (Array (TSyntax `ident)) := do
   match x with
   | Expr.forallE _ _ r _ => do
-    let typeName := mkIdent <| ← mkFreshUserName "t"
+    let typeName := mkIdent <| ← mkFreshUserName (Name.mkSimple "t")
     generateFreshNamesAux r <| arr.push typeName
   | Expr.sort _ => pure arr
   | l => throwError "Unexpected construct in structure type: {repr l}"
@@ -205,7 +205,7 @@ def generateFreshNames (x : Expr) : CoreM (Array (TSyntax `ident)) := generateFr
 def generateNFreshNamesAux (x : Nat) (arr : Array (TSyntax `ident)) : CoreM (Array (TSyntax `ident)) := do
   match x with
   | y + 1 => do
-    let typeName := mkIdent <| ← mkFreshUserName "v"
+    let typeName := mkIdent <| ← mkFreshUserName (Name.mkSimple "v")
     generateNFreshNamesAux y <| arr.push typeName
   | 0 => pure arr
 
@@ -261,9 +261,9 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       let field_fresh_var := freshFieldNameVars.get! field_idx
       trace[debug] "field_idx: {field_idx}"
       trace[debug] "{repr field}"
-      let fieldNameIdent := mkIdent $ name' ++ "l" ++ field.fieldName
+      let fieldNameIdent := mkIdent $ Name.mkSimple name' ++ Name.mkSimple "l" ++ field.fieldName
       let fieldNameIdent' := mkIdent field.fieldName
-      let freshName r := mkIdent <| name' ++ "l" ++ (Name.mkSimple (toString field.fieldName ++ r))
+      let freshName r := mkIdent <| Name.mkSimple name' ++ Name.mkSimple "l" ++ (Name.mkSimple (toString field.fieldName ++ r))
       let accessor ← `(fun a => @$(mkIdent field.projFn) $names:ident* a)
       let setter ←
         `(fun a => (fun b => { a with $fieldNameIdent':ident := b }))
@@ -372,14 +372,14 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       elabCommand <| ← `(addlensrule $(freshName "_view_set_comp2"):ident)
       --elabCommand <| view_set_comp3_lemma
     for main_field in info.fieldInfo do
-      let main_ident := mkIdent $ name' ++ "l" ++ main_field.fieldName
+      let main_ident := mkIdent $ Name.mkSimple name' ++ Name.mkSimple "l" ++ main_field.fieldName
       let main_lens ← `((@$main_ident $names:ident*))
-      let freshName r y := mkIdent <| name' ++ "l" ++ (Name.mkSimple (toString main_field.fieldName ++ r ++ y))
+      let freshName r y := mkIdent <| Name.mkSimple name' ++ Name.mkSimple "l" ++ (Name.mkSimple (toString main_field.fieldName ++ r ++ y))
       for other_field in info.fieldInfo do
         if main_field.fieldName == other_field.fieldName then
           pure ()
         else do
-          let other_ident := mkIdent $ name' ++ "l" ++ other_field.fieldName
+          let other_ident := mkIdent $ Name.mkSimple name' ++ Name.mkSimple "l" ++ other_field.fieldName
           let other_lens ← `((@$other_ident $names:ident*))
           let freshName' := freshName ("_" ++ toString other_field.fieldName)
           trace[Leanses.traceNames] "{freshName' "_set_view"}"

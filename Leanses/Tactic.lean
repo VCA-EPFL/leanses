@@ -68,7 +68,7 @@ def evalSimpLens : Tactic := fun stx => withMainContext do
     let usedSimps ← dischargeWrapper.with fun discharge? =>
       simpLocation ctx simprocs discharge? (expandOptLocation stx[5])
     if tactic.simp.trace.get (← Lean.getOptions) then
-        traceSimpCall stx usedSimps
+        traceSimpCall stx usedSimps.usedTheorems
   | _ => panic! "Wrong simp_lens syntax"
 
 open Lean.Elab.Tactic in
@@ -82,7 +82,7 @@ def evalUnfoldLens : Tactic := fun stx => withMainContext do
     let usedSimps ← dischargeWrapper.with fun discharge? =>
       simpLocation ctx simprocs discharge? (expandOptLocation stx[4])
     if tactic.simp.trace.get (← Lean.getOptions) then
-        traceSimpCall stx usedSimps
+        traceSimpCall stx usedSimps.usedTheorems
   | _ => panic! "Wrong simp_lens syntax"
 
 end Leanses

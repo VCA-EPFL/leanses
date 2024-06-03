@@ -22,17 +22,17 @@ abbrev RuleSet := Array Name
 
 abbrev RuleName := Name
 
-def extensionDescr (n:String) :
+def extensionDescr (n:Name) :
     SimpleScopedEnvExtension.Descr RuleName RuleSet where
   name := n
   addEntry rs r := rs.push r
   initial := ∅
 
 initialize lens_ext : SimpleScopedEnvExtension RuleName RuleSet 
-  ← registerSimpleScopedEnvExtension (extensionDescr "local_lens")
+  ← registerSimpleScopedEnvExtension (extensionDescr (Name.mkSimple "local_lens"))
 
 initialize lens_ext_unfold : SimpleScopedEnvExtension RuleName RuleSet 
-  ← registerSimpleScopedEnvExtension (extensionDescr "local_lens_unfold")
+  ← registerSimpleScopedEnvExtension (extensionDescr (Name.mkSimple "local_lens_unfold"))
 
 syntax (name := addLensRule) "addlensrule" ident : command
 syntax (name := addLensUnfoldRule) "addlensunfoldrule" ident : command
