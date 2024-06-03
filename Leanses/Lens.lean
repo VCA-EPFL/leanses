@@ -312,6 +312,11 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
               = @set _ _ _ _ $appliedLens (@set _ _ _ _ g v (@view _ _ $appliedLens s)) s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
                  , $fieldNameIdent:ident])
+      let set_set_comp_lemma ←
+        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_set_set") $names:ident* :
+            ∀ α s (v v': α) (g : Lens' _ α), @set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v' (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v s)
+                      = @set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v' s := by
+            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4, $fieldNameIdent:ident])
       let view_set_comp_lemma ←
         `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp") $names:ident* :
             ∀ x y v s (f: Lens' _ x) (g: Lens' _ y),
@@ -358,6 +363,9 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       elabCommand <| ← `(addlensrule $(freshName "_view_constr"):ident)
       elabCommand <| comp_view_lemma
       elabCommand <| ← `(addlensrule $(freshName "_comp_view"):ident)
+      -- trace[debug] "{set_set_comp_lemma}"
+      -- elabCommand <| set_set_comp_lemma
+      -- elabCommand <| ← `(addlensrule $(freshName "_comp_set_set"):ident)
       --elabCommand <| comp_set_lemma
       --elabCommand <| view_set_comp_lemma
       elabCommand <| view_set_comp2_lemma

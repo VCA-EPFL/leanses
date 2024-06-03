@@ -6,8 +6,16 @@ import Leanses.Options
 
 namespace Leanses
 
+/-- Optional configuration option for tactics -/
+syntax lens_config := atomic(" (" &"lens_config") " := " withoutPosition(term) ")"
+
+structure Config where
+  defaultHints : Bool := false
+
+declare_config_elab elabSimpLensConfig Config
+
 open Lean.Parser.Tactic in
-syntax (name := simpLens) "simp_lens" (config)? (discharger)? 
+syntax (name := simpLens) "simp_lens" (lens_config)? (config)? (discharger)? 
   (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "]")? (location)? : tactic
 
 open Lean.Parser.Tactic in
@@ -31,6 +39,14 @@ def getSimpTheorems : MetaM SimpTheorems := do
   return s
 
 open Lean Meta Simp Core in
+def getAllSimpTheorems : MetaM SimpTheorems := do
+  let rlist := lens_ext.getState (← getEnv)
+  let mut s : SimpTheorems ← Lean.Meta.getSimpTheorems
+  for name in rlist do
+    s ← s.addConst name
+  return s
+
+open Lean Meta Simp Core in
 def getUnfoldTheorems : MetaM SimpTheorems := do
   let rlist := lens_ext_unfold.getState (← getEnv)
   let mut s : SimpTheorems := {}
@@ -43,11 +59,14 @@ open Lean.Elab.Tactic in
 def evalSimpLens : Tactic := fun stx => withMainContext do
   match stx with 
   | Lean.Syntax.node si st _ =>
-    let nstx_arr := Array.mkArray6 stx[0] stx[1] stx[2] Lean.Syntax.missing stx[3] stx[4]
+    let nstx_arr := Array.mkArray6 stx[0] stx[2] stx[3] Lean.Syntax.missing stx[4] stx[5]
     let nstx := Lean.Syntax.node si st nstx_arr
-    let { ctx, simprocs, dischargeWrapper } ← mkSimpContext nstx (simpTheorems := pure (← getSimpTheorems)) (eraseLocal := false)
+    let config ← elabSimpLensConfig stx[1]
+    let { ctx, simprocs, dischargeWrapper } ← mkSimpContext nstx 
+      (simpTheorems := pure (← (if config.defaultHints then getAllSimpTheorems else getSimpTheorems))) 
+      (eraseLocal := false)
     let usedSimps ← dischargeWrapper.with fun discharge? =>
-      simpLocation ctx simprocs discharge? (expandOptLocation stx[4])
+      simpLocation ctx simprocs discharge? (expandOptLocation stx[5])
     if tactic.simp.trace.get (← Lean.getOptions) then
         traceSimpCall stx usedSimps
   | _ => panic! "Wrong simp_lens syntax"
