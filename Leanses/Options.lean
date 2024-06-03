@@ -50,3 +50,5 @@ def addLensUnfoldRuleHandler : CommandElab
     let name ← resolveGlobalConstNoOverload i
     lens_ext_unfold.add name AttributeKind.global
   | _ => throwUnsupportedSyntax
+
+register_simp_attr lens_set
