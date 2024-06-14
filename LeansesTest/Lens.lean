@@ -76,3 +76,13 @@ namespace LeansesTest.Lens.Test2
 -- #eval ((gset set_Fin 1 (fun (x:Fin 5) => if x == 2 then 3 else 4))) ^.. traverse_Fin
 
 end LeansesTest.Lens.Test2
+
+namespace LeansesTest.Lens.Test3
+
+structure SubEx (α: Type _) where
+  c : List α
+  deriving Repr
+
+mklenses SubEx
+
+end LeansesTest.Lens.Test3

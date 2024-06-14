@@ -234,7 +234,8 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
 @[command_elab mkLens] def mkLensHandler : CommandElab
   | `(mklenses $i) => do
     let name ← resolveGlobalConstNoOverload i
-    let structureType ← liftTermElabM <| liftMetaM <| inferType (Expr.const name [])
+    let nameInst ← liftTermElabM <| liftMetaM <| mkConstWithFreshMVarLevels name
+    let structureType ← liftTermElabM <| liftMetaM <| inferType nameInst
     let names : TSyntaxArray `ident ← liftCoreM <| generateFreshNames structureType
     let numArgs := structureType.getForallBinderNames.length
     trace[debug] "{numArgs}"
