@@ -2,13 +2,8 @@ import Lean
 import Init.Meta
 import Lean.Data.Options
 import Leanses.Options
-import Aesop
 
 namespace Leanses
-
-syntax "aesop_lens" : tactic
-macro_rules
-  | `(tactic| aesop_lens) => `(tactic| aesop (rule_sets := [lens]) )
 
 structure Const (α β: Type _) where
   get : α
@@ -272,7 +267,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       trace[debug] "{defn}"
       trace[Leanses.traceNames] "{freshName "_view_set"}"
       let view_set_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set") $names:ident* :
+        `(theorem $(freshName "_view_set") $names:ident* :
             ∀ s v,
               @view _ _
                 $appliedLens (@set _ _ _ _ $appliedLens v s) = v := by
@@ -280,13 +275,13 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
       trace[debug] "{view_set_lemma}"
       trace[Leanses.traceNames] "{freshName "_set_set"}"
       let set_set_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_set_set") $names:ident* :
+        `(theorem $(freshName "_set_set") $names:ident* :
             ∀ s v v', @set _ _ _ _ $appliedLens v' (@set _ _ _ _ $appliedLens v s)
                       = @set _ _ _ _ $appliedLens v' s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       trace[Leanses.traceNames] "{freshName "_set_view"}"
       let set_view_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_set_view") $names:ident* :
+        `(theorem $(freshName "_set_view") $names:ident* :
             ∀ s, @set _ _ _ _ $appliedLens (@view _ _ $appliedLens s) s = s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
       let lawful_lens_instance ←
@@ -295,30 +290,30 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             set_set := $(freshName "_set_set") $names:ident*
             set_view := $(freshName "_set_view") $names:ident*)
       let view_constr_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_constr") $names:ident* :
+        `(theorem $(freshName "_view_constr") $names:ident* :
             ∀ $freshFieldNameVars:ident*, @view _ _ $appliedLens (@$(mkIdent ctorname):ident $(names ++ freshFieldNameVars):ident*) = $field_fresh_var:ident := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
                  , $fieldNameIdent:ident])
       trace[Leanses.traceNames] "{freshName "_comp_view"}"
       let comp_view_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_view") $names:ident* :
+        `(theorem $(freshName "_comp_view") $names:ident* :
             ∀ α s (g : Lens' _ α), @view _ _ ($appliedLens ∘∘ g) s = @view _ _ g (@view _ _ $appliedLens s) := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
                  , $fieldNameIdent:ident])
       let comp_set_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_set") $names:ident* :
+        `(theorem $(freshName "_comp_set") $names:ident* :
             ∀ α v s (g : Lens' _ α),
               @set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v s
               = @set _ _ _ _ $appliedLens (@set _ _ _ _ g v (@view _ _ $appliedLens s)) s := by
             simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
                  , $fieldNameIdent:ident])
-      let set_set_comp_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_comp_set_set") $names:ident* :
-            ∀ α s (v v': α) (g : Lens' _ α), @set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v' (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v s)
-                      = @set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v' s := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4, $fieldNameIdent:ident])
+      --let _set_set_comp_lemma ←
+      --  `(theorem $(freshName "_comp_set_set") $names:ident* :
+      --      ∀ α s (v v': α) (g : Lens' _ α), @set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v' (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v s)
+      --                = @set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v' s := by
+      --      simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4, $fieldNameIdent:ident])
       let view_set_comp_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp") $names:ident* :
+        `(theorem $(freshName "_view_set_comp") $names:ident* :
             ∀ x y v s (f: Lens' _ x) (g: Lens' _ y),
               @view _ _ ($appliedLens ∘∘ f)
                 (@set _ _ _ _ (Composable4.comp4 Lens _ _ _ _ _ y y $appliedLens g) v s)
@@ -327,14 +322,14 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                  , $fieldNameIdent:ident])
       trace[Leanses.traceNames] "{freshName "_view_set_comp2"}"
       let view_set_comp2_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp2") $names:ident* :
+        `(theorem $(freshName "_view_set_comp2") $names:ident* :
             ∀ y v s (g: Lens' _ y),
               @view _ _ $appliedLens (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ y y $appliedLens g) v s)
               = @set _ _ y y g v (@view _ _ $appliedLens s) := by
               simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
                    , $fieldNameIdent:ident])
       let view_set_comp3_lemma ←
-        `(@[aesop norm (rule_sets := [lens])] theorem $(freshName "_view_set_comp3") $names:ident* :
+        `(theorem $(freshName "_view_set_comp3") $names:ident* :
             ∀ y v s (g: Lens' _ y),
               @view _ _ ($appliedLens ∘∘ g) (@set _ _ _ _ $appliedLens v s)
               = @view _ _ g v := by
@@ -384,7 +379,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           let freshName' := freshName ("_" ++ toString other_field.fieldName)
           trace[Leanses.traceNames] "{freshName' "_set_view"}"
           let contr_set_view_lemma ←
-            `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view"):ident $names:ident* :
+            `(theorem $(freshName' "_set_view"):ident $names:ident* :
                 ∀ v s,
                   @view _ _ $main_lens
                     (@set _ _ _ _ $other_lens v s)
@@ -392,7 +387,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                   simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
           trace[Leanses.traceNames] "{freshName' "_set_view_comp"}"
           let contr_set_view_comp_lemma ←
-            `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp"):ident $names:ident* :
+            `(theorem $(freshName' "_set_view_comp"):ident $names:ident* :
                 ∀ x v s (f: Lens' _ x),
                   @view _ _ $main_lens
                     (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ x x $other_lens f) v s)
@@ -400,7 +395,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                   simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
                        , $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma2 ←
-            `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
+            `(theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
                 ∀ x y v s (g: Lens' _ y) (f: Lens' _ x),
                   @view _ _ ($main_lens ∘∘ g)
                     (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ x x $other_lens f) v s)
@@ -408,7 +403,7 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                   simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
                        , $main_ident:ident, $other_ident:ident])
           let contr_set_view_comp_lemma3 ←
-            `(@[aesop norm (rule_sets := [lens])] theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
+            `(theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
                 ∀ y v s (g: Lens' _ y),
                   @view _ _ ($main_lens ∘∘ g)
                     (@set _ _ _ _ $other_lens v s)
@@ -433,7 +428,6 @@ def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n → a) : Fin n → a :=
     else
       f i
 
-@[aesop norm (rule_sets := [lens])]
 theorem fview_view a b:
   @fview x y b a = @view x y a b := by
   simp [fview, flip]
@@ -448,7 +442,7 @@ theorem update_Fin_gso2 {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
   ¬(i' = i) → update_Fin i' e f i = f i := by
     intro h1
     have h1 := Ne.symm h1
-    aesop_lens
+    simp [h1]
 
 @[simp]
 theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
@@ -458,25 +452,21 @@ def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
   lens' (fun a => a i) (fun a b => update_Fin i b a)
 addlensunfoldrule fin_at
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss :
   view (fin_at n) (set (fin_at n) x y) = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
 addlensrule fin_at_gss
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss_comp :
   view (fin_at n) (set (fin_at n∘∘g) x y) = set g x (view (fin_at n) y) := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable2.comp,Composable4.comp4]
 addlensrule fin_at_gss_comp
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso :
   ¬ n = m → view (fin_at n) (set (fin_at m) x y) = view (fin_at n) y := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
 addlensrule fin_at_gso
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2 :
   ¬ m = n → view (fin_at n) (set (fin_at m) x y) = view (fin_at n) y := by
   intros h1
@@ -484,7 +474,6 @@ theorem fin_at_gso2 :
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
 addlensrule fin_at_gso2
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2_comp :
   ¬ m = n → view (fin_at n) (set (fin_at m∘∘g) x y) = view (fin_at n) y := by
   intros h1
@@ -492,19 +481,16 @@ theorem fin_at_gso2_comp :
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
 addlensrule fin_at_gso2_comp
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso_comp :
   ¬ n = m → view (fin_at n) (set (fin_at m∘∘g) x y) = view (fin_at n) y := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
 addlensrule fin_at_gso_comp
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso_app :
   ¬ n = m → (set (fin_at m) x y) n = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
 --addlensrule fin_at_gso_app
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2_app :
   ¬ m = n → (set (fin_at m) x y) n = y n := by
   intros h1
@@ -512,7 +498,6 @@ theorem fin_at_gso2_app :
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
 --addlensrule fin_at_gso2_app
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso2_comp_app :
   ¬ m = n → (set (fin_at m∘∘g) x y) n = y n := by
   intros h1
@@ -520,31 +505,26 @@ theorem fin_at_gso2_comp_app :
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
 --addlensrule fin_at_gso2_comp_app
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gso_comp_app :
   ¬ n = m → (set (fin_at m∘∘g) x y) n = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
 --addlensrule fin_at_gso_comp_app
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_apply :
   view (fin_at n) y = y n := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
 --addlensrule fin_at_apply
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss2 :
   (set (fin_at n) x y) n = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
 --addlensrule fin_at_gss2
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_gss2_comp :
   (set (fin_at n∘∘g) x y) n = set g x (y n) := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
 --addlensrule fin_at_gss2_comp
 
-@[aesop norm (rule_sets := [lens])]
 theorem fin_at_view_comp :
   view (fin_at n∘∘g) x = view g (view (fin_at n) x) := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
