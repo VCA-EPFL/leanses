@@ -86,3 +86,42 @@ structure SubEx (α: Type _) where
 mklenses SubEx
 
 end LeansesTest.Lens.Test3
+
+namespace LeansesTest.Lens.Test4
+
+structure SubEx (α: Type _) where
+  c1 : List α
+  c2 : List α
+  c3 : List α
+  c4 : List α
+  c5 : List α
+  c6 : List α
+  c7 : List α
+  c8 : List α
+  c9 : List α
+  c10 : List α
+  c11 : List α
+  c12 : List α
+  c13 : List α
+  c14 : List α
+  c15 : List α
+  c16 : List α
+  c17 : List α
+  c18 : List α
+  c19 : List α
+  c20 : List α
+  c21 : List α
+  c22 : List α
+  c23 : List α
+  c24 : List α
+  c25 : List α
+  c26 : List α
+  c27 : List α
+  c28 : List α
+  c29 : List α
+  c30 : List α
+  deriving Repr
+
+mklenses SubEx
+
+end LeansesTest.Lens.Test4

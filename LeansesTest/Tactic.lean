@@ -21,11 +21,11 @@ open Leanses
 
 example (str:Example n):
   <{ str with s3 n∘∘c n∘∘fin_at j := "Random" }>^.s3 n∘∘c n∘∘fin_at j = "Random" := by
-  simp_lens; rfl
+  simp_lens
 
 example (str:Example n):
   i = j → <{ str with s2 n := 3, s3 n∘∘c n∘∘fin_at j := "Random" }>^.s3 n∘∘c n∘∘fin_at i = "Random" := by
-  intros; subst i; simp_lens; rfl
+  intros; subst i; simp_lens
 
 example (str:Example n):
   i ≠ j → <{ str with s3 n∘∘c n∘∘fin_at j := "Random" }>^.s3 n∘∘c n∘∘fin_at i = str^.s3 n∘∘c n∘∘fin_at i := by

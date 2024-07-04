@@ -271,20 +271,17 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
         `(theorem $(freshName "_view_set") $names:ident* :
             ∀ s v,
               @view _ _
-                $appliedLens (@set _ _ _ _ $appliedLens v s) = v := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
+                $appliedLens (@set _ _ _ _ $appliedLens v s) = v := by intros; rfl)
       trace[debug] "{view_set_lemma}"
       trace[Leanses.traceNames] "{freshName "_set_set"}"
       let set_set_lemma ←
         `(theorem $(freshName "_set_set") $names:ident* :
             ∀ s v v', @set _ _ _ _ $appliedLens v' (@set _ _ _ _ $appliedLens v s)
-                      = @set _ _ _ _ $appliedLens v' s := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
+                      = @set _ _ _ _ $appliedLens v' s := by intros; rfl)
       trace[Leanses.traceNames] "{freshName "_set_view"}"
       let set_view_lemma ←
         `(theorem $(freshName "_set_view") $names:ident* :
-            ∀ s, @set _ _ _ _ $appliedLens (@view _ _ $appliedLens s) s = s := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $fieldNameIdent:ident])
+            ∀ s, @set _ _ _ _ $appliedLens (@view _ _ $appliedLens s) s = s := by intros; rfl)
       let lawful_lens_instance ←
         `(instance ($names:ident*) : LawfulLens ($fieldNameIdent $names:ident*) where
             view_set := $(freshName "_view_set") $names:ident*
@@ -292,22 +289,16 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             set_view := $(freshName "_set_view") $names:ident*)
       let view_constr_lemma ←
         `(theorem $(freshName "_view_constr") $names:ident* :
-            ∀ $freshFieldNameVars:ident*, @view _ _ $appliedLens (@$(mkIdent ctorname):ident $(names ++ freshFieldNameVars):ident*) = $field_fresh_var:ident := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
-                 , $fieldNameIdent:ident])
+            ∀ $freshFieldNameVars:ident*, @view _ _ $appliedLens (@$(mkIdent ctorname):ident $(names ++ freshFieldNameVars):ident*) = $field_fresh_var:ident := by intros; rfl)
       trace[Leanses.traceNames] "{freshName "_comp_view"}"
       let comp_view_lemma ←
         `(theorem $(freshName "_comp_view") $names:ident* :
-            ∀ α s (g : Lens' _ α), @view _ _ ($appliedLens ∘∘ g) s = @view _ _ g (@view _ _ $appliedLens s) := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
-                 , $fieldNameIdent:ident])
+            ∀ α s (g : Lens' _ α), @view _ _ ($appliedLens ∘∘ g) s = @view _ _ g (@view _ _ $appliedLens s) := by intros; rfl)
       let comp_set_lemma ←
         `(theorem $(freshName "_comp_set") $names:ident* :
             ∀ α v s (g : Lens' _ α),
               @set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v s
-              = @set _ _ _ _ $appliedLens (@set _ _ _ _ g v (@view _ _ $appliedLens s)) s := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
-                 , $fieldNameIdent:ident])
+              = @set _ _ _ _ $appliedLens (@set _ _ _ _ g v (@view _ _ $appliedLens s)) s := by intros; rfl)
       --let _set_set_comp_lemma ←
       --  `(theorem $(freshName "_comp_set_set") $names:ident* :
       --      ∀ α s (v v': α) (g : Lens' _ α), @set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v' (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ α α $appliedLens g) v s)
@@ -318,34 +309,28 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
             ∀ x y v s (f: Lens' _ x) (g: Lens' _ y),
               @view _ _ ($appliedLens ∘∘ f)
                 (@set _ _ _ _ (Composable4.comp4 Lens _ _ _ _ _ y y $appliedLens g) v s)
-              = @view _ _ f (@set _ _ y y g v (@view _ _ $appliedLens s)) := by
-            simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
-                 , $fieldNameIdent:ident])
+              = @view _ _ f (@set _ _ y y g v (@view _ _ $appliedLens s)) := by intros; rfl)
       trace[Leanses.traceNames] "{freshName "_view_set_comp2"}"
       let view_set_comp2_lemma ←
         `(theorem $(freshName "_view_set_comp2") $names:ident* :
             ∀ y v s (g: Lens' _ y),
               @view _ _ $appliedLens (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ y y $appliedLens g) v s)
-              = @set _ _ y y g v (@view _ _ $appliedLens s) := by
-              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
-                   , $fieldNameIdent:ident])
+              = @set _ _ y y g v (@view _ _ $appliedLens s) := by intros; rfl)
       let view_set_comp3_lemma ←
         `(theorem $(freshName "_view_set_comp3") $names:ident* :
             ∀ y v s (g: Lens' _ y),
               @view _ _ ($appliedLens ∘∘ g) (@set _ _ _ _ $appliedLens v s)
-              = @view _ _ g v := by
-              simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
-                   , $fieldNameIdent:ident])
-      trace[debug] "{defn}"
-      trace[debug] "{view_set_lemma}"
-      trace[debug] "{set_set_lemma}"
-      trace[debug] "{set_view_lemma}"
-      trace[debug] "{lawful_lens_instance}"
-      trace[debug] "{comp_view_lemma}"
-      trace[debug] "{comp_set_lemma}"
-      trace[debug] "{view_set_comp_lemma}"
-      trace[debug] "{view_set_comp3_lemma}"
-      trace[debug] "{view_constr_lemma}"
+              = @view _ _ g v := by intros; rfl)
+      trace[Leanses.impl] "{defn}"
+      trace[Leanses.impl] "{view_set_lemma}"
+      trace[Leanses.impl] "{set_set_lemma}"
+      trace[Leanses.impl] "{set_view_lemma}"
+      trace[Leanses.impl] "{lawful_lens_instance}"
+      trace[Leanses.impl] "{comp_view_lemma}"
+      trace[Leanses.impl] "{comp_set_lemma}"
+      trace[Leanses.impl] "{view_set_comp_lemma}"
+      trace[Leanses.impl] "{view_set_comp3_lemma}"
+      trace[Leanses.impl] "{view_constr_lemma}"
       elabCommand <| defn
       elabCommand <| ← `(addlensunfoldrule $fieldNameIdent:ident)
       elabCommand <| view_set_lemma
@@ -384,36 +369,28 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                 ∀ v s,
                   @view _ _ $main_lens
                     (@set _ _ _ _ $other_lens v s)
-                  = @view _ _ $main_lens s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, $main_ident:ident, $other_ident:ident])
+                  = @view _ _ $main_lens s := by intros; rfl)
           trace[Leanses.traceNames] "{freshName' "_set_view_comp"}"
           let contr_set_view_comp_lemma ←
             `(theorem $(freshName' "_set_view_comp"):ident $names:ident* :
                 ∀ x v s (f: Lens' _ x),
                   @view _ _ $main_lens
                     (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ x x $other_lens f) v s)
-                  = @view _ _ $main_lens s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
-                       , $main_ident:ident, $other_ident:ident])
+                  = @view _ _ $main_lens s := by intros; rfl)
           let contr_set_view_comp_lemma2 ←
             `(theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
                 ∀ x y v s (g: Lens' _ y) (f: Lens' _ x),
                   @view _ _ ($main_lens ∘∘ g)
                     (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ x x $other_lens f) v s)
-                  = @view _ _ ($main_lens ∘∘ g) s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
-                       , $main_ident:ident, $other_ident:ident])
+                  = @view _ _ ($main_lens ∘∘ g) s := by intros; rfl)
           let contr_set_view_comp_lemma3 ←
             `(theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
                 ∀ y v s (g: Lens' _ y),
                   @view _ _ ($main_lens ∘∘ g)
                     (@set _ _ _ _ $other_lens v s)
-                  = @view _ _ ($main_lens ∘∘ g) s := by
-                  simp [view, set, Functor.map, lens', lens, Id.run, Const.get, Composable2.comp, Composable4.comp4
-                       , $main_ident:ident, $other_ident:ident])
-          trace[debug] "{contr_set_view_lemma}"
-          trace[debug] "{contr_set_view_comp_lemma2}"
-          trace[debug] "{contr_set_view_comp_lemma3}"
+                  = @view _ _ ($main_lens ∘∘ g) s := by intros; rfl)
+          trace[Leanses.impl] "{contr_set_view_lemma}"
+          trace[Leanses.impl] "{contr_set_view_comp_lemma}"
           elabCommand <| contr_set_view_lemma
           elabCommand <| ← `(addlensrule $(freshName' "_set_view"):ident)
           elabCommand <| contr_set_view_comp_lemma

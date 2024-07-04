@@ -14,6 +14,7 @@ register_option pp.zeroLensUpdates : Bool := {
 
 initialize Lean.registerTraceClass `Leanses.traceNames
 initialize Lean.registerTraceClass `Leanses.debug
+initialize Lean.registerTraceClass `Leanses.impl
 
 abbrev RuleSet := Array Name
 
