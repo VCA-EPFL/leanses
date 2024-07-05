@@ -122,6 +122,17 @@ structure SubEx (α: Type _) where
   c30 : List α
   deriving Repr
 
-mklenses SubEx
+-- mklenses SubEx
 
 end LeansesTest.Lens.Test4
+
+namespace LeansesTest.Lens.Test5
+
+structure Module (S : Type u_1) : Type (max u_1 (u_2 + 1)) where
+  inputs : List ((T : Type u_2) × (S -> T -> S -> Prop))
+  outputs : List ((T : Type u_2) × (S -> T -> S -> Prop))
+  internals : List (S -> S -> Prop)
+
+mklenses Module
+
+end LeansesTest.Lens.Test5

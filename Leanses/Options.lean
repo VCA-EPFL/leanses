@@ -50,3 +50,5 @@ def addLensUnfoldRuleHandler : CommandElab
   | _ => throwUnsupportedSyntax
 
 register_simp_attr lens_set
+register_simp_attr ulens_set
+register_simp_attr ulens_unfold
