@@ -55,17 +55,17 @@ info: <{ v with s3∘∘c := "deep", s1 := "c" }> : Example
 
 set_option pp.hideLensUpdates true
 
-/--
-info: <{ v ... }> : Example
--/
-#guard_msgs in
-#check <{ v with s2 := 5, s1 := "b" }>
+-- /--
+-- info: <{ v ... }> : Example
+-- -/
+-- #guard_msgs in
+-- #check <{ v with s2 := 5, s1 := "b" }>
 
-/--
-info: <{ v ... }> : Example
--/
-#guard_msgs in
-#check <{ v with s3∘∘c := "deep", s1 := "c" }>
+-- /--
+-- info: <{ v ... }> : Example
+-- -/
+-- #guard_msgs in
+-- #check <{ v with s3∘∘c := "deep", s1 := "c" }>
 
 end LeansesTest.Lens.Test1
 
