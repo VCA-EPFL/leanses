@@ -185,8 +185,6 @@ open Lean Meta PrettyPrinter Delaborator SubExpr in
 open Lean Elab Command
 open Parser Meta
 
-open Lean Meta PrettyPrinter Delaborator SubExpr in
-
 def generateFreshNamesAux (x : Expr) (arr : Array (TSyntax `ident)) : CoreM (Array (TSyntax `ident)) := do
   match x with
   | Expr.forallE _ _ r _ => do
@@ -540,3 +538,23 @@ def traverse_Fin {n} {a} [Inhabited a] : Traversal' (Fin n → a) a :=
 def set_Fin {n} {a} [Inhabited a] : ASetter' (Fin n → a) a := @traverse_Fin n a _
 
 end Leanses
+
+open Leanses
+
+section
+
+class Random where
+  x : Nat
+
+variable [r : Random]
+
+structure Module where
+  inputs : Fin r.x
+
+def Module.l.inputs [t : Random] :=
+      @lens' _ _ (fun a => @Module.inputs t a) fun a => (fun b => { a with inputs := b })
+
+set_option trace.Leanses.impl true in
+mklenses Module
+
+end

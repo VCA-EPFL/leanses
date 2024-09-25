@@ -136,3 +136,21 @@ structure Module (S : Type u_1) : Type (max u_1 (u_2 + 1)) where
 mklenses Module
 
 end LeansesTest.Lens.Test5
+
+namespace LeansesTest.Lens.Test6
+
+section
+
+class Random where
+  x : Nat
+
+variable [r : Random]
+
+structure Module where
+  inputs : Fin r.x
+
+mklenses Module
+
+end
+
+end LeansesTest.Lens.Test6
