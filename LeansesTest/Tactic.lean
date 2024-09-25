@@ -19,6 +19,8 @@ open Example.l
 
 open Leanses
 
+set_option autoImplicit true
+
 example (str:Example n):
   <{ str with s3 n∘∘c n∘∘fin_at j := "Random" }>^.s3 n∘∘c n∘∘fin_at j = "Random" := by
   simp_lens
@@ -34,5 +36,7 @@ example (str:Example n):
 example (str:Example n):
   i ≠ j → <{ str with s3 n∘∘c n∘∘fin_at j := "Random" }>^.s3 n∘∘c n∘∘fin_at i = str^.s3 n∘∘c n∘∘fin_at i := by
   intros; unfold_lens; simp [*, update_Fin_gso]
+
+set_option autoImplicit false
 
 end LeansesTest.Tactic.Test1

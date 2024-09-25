@@ -2,6 +2,9 @@ name = "leanses"
 testDriver = "LeansesTest"
 defaultTargets = ["Leanses"]
 
+[leanOptions]
+autoImplicit = false
+
 [[lean_lib]]
 name = "Leanses"
 

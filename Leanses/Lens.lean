@@ -8,10 +8,10 @@ namespace Leanses
 structure Const (α β: Type _) where
   get : α
 
-instance : Functor (Const α) where
+instance {α} : Functor (Const α) where
   map _ a := Const.mk a.get
 
-instance : LawfulFunctor (Const α) where
+instance {α} : LawfulFunctor (Const α) where
   id_map := by
     intros; unfold id Functor.map instFunctorConst; simp
   comp_map := by
@@ -20,11 +20,11 @@ instance : LawfulFunctor (Const α) where
     unfold Functor.mapConst Functor.map instFunctorConst
     simp
 
-instance [Inhabited α] [Append α] : Applicative (Const α) where
+instance {α} [Inhabited α] [Append α] : Applicative (Const α) where
   pure _ := Const.mk default
   seq f a := Const.mk $ f.get ++ (a ()).get
 
-class IndexedFunctor (f : Type _ → Type _ → Type _) where
+class IndexedFunctor {a b x y} (f : Type _ → Type _ → Type _) where
     -- | imap is similar to fmap
     imap : (x → y) -- ^ function to apply to first parameter
            → (a → b) -- ^ function to apply to second parameter
@@ -34,10 +34,10 @@ class IndexedFunctor (f : Type _ → Type _ → Type _) where
 structure Endo (α: Type _) where
   app : α → α
 
-instance : Append (Endo α) where
+instance {α} : Append (Endo α) where
   append a b := Endo.mk (a.app ∘ b.app)
 
-instance : Inhabited (Endo α) where
+instance {α} : Inhabited (Endo α) where
   default := Endo.mk id
 
 def Lens s t a b := ∀ f [Functor f], (a → f b) → s → f t
@@ -49,60 +49,60 @@ abbrev Traversal' a b := Traversal a a b b
 def ITraversal s t a b := ∀ f [Functor f] [Applicative f], (a → f b) → s → f t
 abbrev ITraversal' a b := Traversal a a b b
 
-instance : Coe (Lens s t a b) (Traversal s t a b) where
+instance {s t a b} : Coe (Lens s t a b) (Traversal s t a b) where
   coe a := fun F => a F
 
-instance : Coe (Lens' s a) (Traversal' s a) where
+instance {s a} : Coe (Lens' s a) (Traversal' s a) where
   coe a := fun F => a F
 
 def Getting r s a := (a → Const r a) → s → Const r s
 
-instance : Coe (Lens' a b) (∀ r, Getting r a b) where
+instance {a b} : Coe (Lens' a b) (∀ r, Getting r a b) where
   coe a := fun r => a (Const r)
 
-instance [Inhabited r] [Append r] : Coe (Traversal' a b) (Getting r a b) where
+instance {r a b} [Inhabited r] [Append r] : Coe (Traversal' a b) (Getting r a b) where
   coe a := a (Const r)
 
 def ASetter s t a b := (a → Id b) → s → Id t
 abbrev ASetter' s a := ASetter s s a a
 
-instance : Coe (Lens s t a b) (ASetter s t a b) where
+instance {s t a b} : Coe (Lens s t a b) (ASetter s t a b) where
   coe a := a Id
 
-instance : Coe (Traversal s t a b) (ASetter s t a b) where
+instance {s t a b} : Coe (Traversal s t a b) (ASetter s t a b) where
   coe a := a Id
 
-def lens (get: s → a) (set: s → b → t): Lens s t a b :=
+def lens {s t a b} (get: s → a) (set: s → b → t): Lens s t a b :=
   fun F [Functor F] afb s => Functor.map (set s) (afb (get s))
 
-def lens' (get: s → a) (set: s → a → s): Lens' s a :=
+def lens' {s a} (get: s → a) (set: s → a → s): Lens' s a :=
   lens get set
 
-def over (setter: Lens s t a b) (upd: a → b): s → t :=
+def over {s t a b} (setter: Lens s t a b) (upd: a → b): s → t :=
   Id.run ∘ setter Id (pure ∘ upd)
 
-def set (setter: Lens s t a b) (v: b): s → t :=
+def set {s t a b} (setter: Lens s t a b) (v: b): s → t :=
   Id.run ∘ setter Id (fun _ => pure v)
 
-def gset (setter: ASetter s t a b) (v: b): s → t :=
+def gset {s t a b} (setter: ASetter s t a b) (v: b): s → t :=
   Id.run ∘ setter (fun _ => pure v)
 
-def view (getting: Lens' s a): s → a := Const.get ∘ getting (Const a) Const.mk
+def view {s a} (getting: Lens' s a): s → a := Const.get ∘ getting (Const a) Const.mk
 
 def fview {s a} := flip (@view s a)
 
-def fold_map_of [Append r] [Inhabited r] (l: Traversal' s a) (f: a → r) :=
+def fold_map_of {r s a} [Append r] [Inhabited r] (l: Traversal' s a) (f: a → r) :=
   Const.get ∘ l _ (Const.mk ∘ f)
 
-def foldr_of (l: Traversal' s a) (f: a → r → r) (z: r) :=
+def foldr_of {s a r} (l: Traversal' s a) (f: a → r → r) (z: r) :=
   flip Endo.app z ∘ fold_map_of l (Endo.mk ∘ f)
 
-def to_list_of (l: Traversal' s a) :=
+def to_list_of {s a} (l: Traversal' s a) :=
   foldr_of l List.cons []
 
 def fto_list_of {a s} := flip (@to_list_of a s)
 
-class LawfulLens (l : Lens' s a) : Prop where
+class LawfulLens {s a} (l : Lens' s a) : Prop where
   view_set : ∀ s v, view l (set l v s) = v
   set_view : ∀ s, set l (view l s) s = s
   set_set : ∀ s v v', set l v' (set l v s) = set l v' s
@@ -122,10 +122,10 @@ instance : Composable4 Traversal where
 instance : Composable4 ASetter where
   comp4 f g := f ∘ g
 
-instance [Composable4 T] : Composable2 (fun a b => T a a b b) where
+instance {T} [Composable4 T] : Composable2 (fun a b => T a a b b) where
   comp := Composable4.comp4
 
-instance : Composable2 (Getting r) where
+instance {r} : Composable2 (Getting r) where
   comp f g := f ∘ g
 
 def comp {t a b} [tinst : Composable2 t] := @Composable2.comp t tinst a b
@@ -222,7 +222,7 @@ addlensunfoldrule flip
 addlensunfoldrule Function.comp
 addlensunfoldrule pure
 
-def getConstructors [Monad m] [MonadEnv m] [MonadError m] (constName : Name) : m (Option InductiveVal) := do
+def getConstructors {m} [Monad m] [MonadEnv m] [MonadError m] (constName : Name) : m (Option InductiveVal) := do
   let cinfo ← getConstInfo constName
   match cinfo with
   | ConstantInfo.inductInfo val => return some val
@@ -377,13 +377,13 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                   @view _ _ $main_lens
                     (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ x x $other_lens f) v s)
                   = @view _ _ $main_lens s := by intros; rfl)
-          let contr_set_view_comp_lemma2 ←
+          let _contr_set_view_comp_lemma2 ←
             `(theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
                 ∀ x y v s (g: Lens' _ y) (f: Lens' _ x),
                   @view _ _ ($main_lens ∘∘ g)
                     (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ x x $other_lens f) v s)
                   = @view _ _ ($main_lens ∘∘ g) s := by intros; rfl)
-          let contr_set_view_comp_lemma3 ←
+          let _contr_set_view_comp_lemma3 ←
             `(theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
                 ∀ y v s (g: Lens' _ y),
                   @view _ _ ($main_lens ∘∘ g)
@@ -399,32 +399,34 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           --elabCommand <| contr_set_view_comp_lemma3
   | _ => throwUnsupportedSyntax
 
-def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n → a) : Fin n → a :=
+def update_Fin {a} {n} (i' : Fin n)  (e : a) (f : Fin n → a) : Fin n → a :=
   fun i =>
     if i == i' then
       e
     else
       f i
 
-theorem fview_view a b:
+theorem fview_view x y a b:
   @fview x y b a = @view x y a b := by
   simp [fview, flip]
 addlensrule fview_view
 
 @[simp]
-theorem update_Fin_gso {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
+theorem update_Fin_gso {a: Type} {n} (i i' : Fin n) (e : a) (f : Fin n → a) :
   ¬(i = i') → update_Fin i' e f i = f i := by intro h1; simp [update_Fin, h1]
 
 @[simp]
-theorem update_Fin_gso2 {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
+theorem update_Fin_gso2 {a: Type} {n} (i i' : Fin n) (e : a) (f : Fin n → a) :
   ¬(i' = i) → update_Fin i' e f i = f i := by
     intro h1
     have h1 := Ne.symm h1
     simp [h1]
 
 @[simp]
-theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
+theorem update_Fin_gss {n} {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
   update_Fin i e f i  = e := by simp [update_Fin]
+
+set_option autoImplicit true
 
 def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
   lens' (fun a => a i) (fun a b => update_Fin i b a)
@@ -538,5 +540,7 @@ def traverse_Fin {n} {a} [Inhabited a] : Traversal' (Fin n → a) a :=
 
 @[simp]
 def set_Fin {n} {a} [Inhabited a] : ASetter' (Fin n → a) a := @traverse_Fin n a _
+
+set_option autoImplicit false
 
 end Leanses

@@ -1,5 +1,7 @@
 import Leanses
 
+set_option autoImplicit true
+
 namespace LeansesTest.Lens.Test1
 
 structure SubEx where
@@ -136,3 +138,5 @@ structure Module (S : Type u_1) : Type (max u_1 (u_2 + 1)) where
 mklenses Module
 
 end LeansesTest.Lens.Test5
+
+set_option autoImplicit false

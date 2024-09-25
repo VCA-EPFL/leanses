@@ -13,17 +13,17 @@ abbrev Lens' s a := Lens s s a a
 
 def lens' {s : Sort _} {a : Sort _} (get : s → a) (set : s → a → s) : Lens' s a := Lens.mk get set
 
-def over (lens: Lens s t a b) (upd: a → b): s → t :=
+def over {s t a b} (lens: Lens s t a b) (upd: a → b): s → t :=
   fun s => lens.set s (upd (lens.get s))
 
-def set (lens: Lens s t a b) (v: b): s → t :=
+def set {s t a b} (lens: Lens s t a b) (v: b): s → t :=
   fun s => lens.set s v
 
-def view (lens: Lens' s a): s → a := lens.get
+def view {s a} (lens: Lens' s a): s → a := lens.get
 
 def fview {s a} := flip (@view s a)
 
-class LawfulLens (l : Lens' s a) : Prop where
+class LawfulLens {s a} (l : Lens' s a) : Prop where
   view_set : ∀ s v, view l (set l v s) = v
   set_view : ∀ s, set l (view l s) s = s
   set_set : ∀ s v v', set l v' (set l v s) = set l v' s
@@ -104,7 +104,7 @@ def generateNFreshNamesAux (x : Nat) (arr : Array (TSyntax `ident)) : CoreM (Arr
 
 def generateNFreshNames (x : Nat) : CoreM (Array (TSyntax `ident)) := generateNFreshNamesAux x default
 
-def getConstructors [Monad m] [MonadEnv m] [MonadError m] (constName : Name) : m (Option InductiveVal) := do
+def getConstructors {m} [Monad m] [MonadEnv m] [MonadError m] (constName : Name) : m (Option InductiveVal) := do
   let cinfo ← getConstInfo constName
   match cinfo with
   | ConstantInfo.inductInfo val => return some val
@@ -252,13 +252,13 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
                   @view _ _ $main_lens
                     (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ x x $other_lens f) v s)
                   = @view _ _ $main_lens s := by intros; rfl)
-          let contr_set_view_comp_lemma2 ←
+          let _contr_set_view_comp_lemma2 ←
             `(@[ulens_set] theorem $(freshName' "_set_view_comp2"):ident $names:ident* :
                 ∀ x y v s (g: Lens' _ y) (f: Lens' _ x),
                   @view _ _ ($main_lens ∘∘ g)
                     (@set _ _ _ _ (@Composable4.comp4 Lens _ _ _ _ _ x x $other_lens f) v s)
                   = @view _ _ ($main_lens ∘∘ g) s := by intros; rfl)
-          let contr_set_view_comp_lemma3 ←
+          let _contr_set_view_comp_lemma3 ←
             `(@[ulens_set] theorem $(freshName' "_set_view_comp3"):ident $names:ident* :
                 ∀ y v s (g: Lens' _ y),
                   @view _ _ ($main_lens ∘∘ g)
@@ -270,38 +270,40 @@ open Lean Meta PrettyPrinter Delaborator SubExpr Core in
           elabCommand <| contr_set_view_comp_lemma
   | _ => throwUnsupportedSyntax
 
-def update_Fin {a} (i' : Fin n)  (e : a) (f : Fin n → a) : Fin n → a :=
+def update_Fin {a n} (i' : Fin n)  (e : a) (f : Fin n → a) : Fin n → a :=
   fun i =>
     if i == i' then
       e
     else
       f i
 
-@[ulens_set] theorem fview_view a b:
+@[ulens_set] theorem fview_view x y a b:
   @fview x y b a = @view x y a b := by
   simp [fview, flip]
 
 @[simp, ulens_set]
-theorem update_Fin_gso {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
+theorem update_Fin_gso {a: Type} {n} (i i' : Fin n)  (e : a) (f : Fin n → a) :
   ¬(i = i') → update_Fin i' e f i = f i := by intro h1; simp [update_Fin, h1]
 
 @[simp, ulens_set]
-theorem update_Fin_gso2 {a: Type} (i i' : Fin n)  (e : a) (f : Fin n → a) :
+theorem update_Fin_gso2 {a: Type} {n} (i i' : Fin n)  (e : a) (f : Fin n → a) :
   ¬(i' = i) → update_Fin i' e f i = f i := by
     intro h1
     have h1 := Ne.symm h1
     simp [h1]
 
 @[simp, ulens_set]
-theorem update_Fin_gss {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
+theorem update_Fin_gss {a: Type _} {n} (i  : Fin n)  (e : a) (f : Fin n → a) :
   update_Fin i e f i  = e := by simp [update_Fin]
 
-@[ulens_unfold] def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
+@[ulens_unfold] def fin_at {a: Type _} {n} (i : Fin n) : Lens' (Fin n → a) a :=
   Lens.mk (fun a => a i) (fun a b => update_Fin i b a)
 
-theorem fin_at_gss :
+theorem fin_at_gss {α : Type _} {m : Nat} {n : Fin m} (x : α) y :
   view (fin_at n) (set (fin_at n) x y) = x := by
   simp [fin_at,view,set,Functor.map,Id.run,update_Fin,Composable4.comp4]
+
+set_option autoImplicit true
 
 @[ulens_set] theorem fin_at_gss_comp :
   view (fin_at n) (set (fin_at n∘∘g) x y) = set g x (view (fin_at n) y) := by
@@ -362,5 +364,7 @@ theorem fin_at_gss2_comp :
 @[ulens_set] theorem fin_at_view_comp :
   view (fin_at n∘∘g) x = view g (view (fin_at n) x) := by
   simp [fin_at,view,set,Functor.map,Id.run,update_Fin,Composable4.comp4]
+
+set_option autoImplicit false
 
 end Leanses.UniverseLens

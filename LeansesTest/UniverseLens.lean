@@ -1,5 +1,7 @@
 import Leanses.UniverseLens
 
+set_option autoImplicit true
+
 namespace LeansesTest.Lens.Test1
 
 structure SubEx where
@@ -127,3 +129,5 @@ structure SubEx (α: Type _) where
 mklenses SubEx
 
 end LeansesTest.Lens.Test4
+
+set_option autoImplicit false
