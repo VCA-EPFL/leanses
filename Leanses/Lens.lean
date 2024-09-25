@@ -426,98 +426,96 @@ theorem update_Fin_gso2 {a: Type} {n} (i i' : Fin n) (e : a) (f : Fin n → a) :
 theorem update_Fin_gss {n} {a: Type} (i  : Fin n)  (e : a) (f : Fin n → a) :
   update_Fin i e f i  = e := by simp [update_Fin]
 
-set_option autoImplicit true
-
-def fin_at {n} (i : Fin n) : Lens' (Fin n → a) a :=
+def fin_at {a n} (i : Fin n) : Lens' (Fin n → a) a :=
   lens' (fun a => a i) (fun a b => update_Fin i b a)
 addlensunfoldrule fin_at
 
-theorem fin_at_gss :
-  view (fin_at n) (set (fin_at n) x y) = x := by
+theorem fin_at_gss {n : Nat} {m : Fin n} {α : Type _} {x : α} {y : Fin n → α} :
+  view (fin_at m) (set (fin_at m) x y) = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
 addlensrule fin_at_gss
 
-theorem fin_at_gss_comp :
-  view (fin_at n) (set (fin_at n∘∘g) x y) = set g x (view (fin_at n) y) := by
+theorem fin_at_gss_comp {n : Nat} {m : Fin n} {s a b : Type _} {g : Lens s s a b} {x : b} {y : Fin n → s} :
+  view (fin_at m) (set (fin_at m∘∘g) x y) = set g x (view (fin_at m) y) := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable2.comp,Composable4.comp4]
 addlensrule fin_at_gss_comp
 
-theorem fin_at_gso :
-  ¬ n = m → view (fin_at n) (set (fin_at m) x y) = view (fin_at n) y := by
+theorem fin_at_gso {n : Nat} {n' m : Fin n} {α : Type _} {x : α} {y : Fin n → α} :
+  ¬ n' = m → view (fin_at n') (set (fin_at m) x y) = view (fin_at n') y := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
 addlensrule fin_at_gso
 
-theorem fin_at_gso2 :
+theorem fin_at_gso2 {n' : Nat} {m n : Fin n'} {α : Type _} {x : α} {y : Fin n' → α} :
   ¬ m = n → view (fin_at n) (set (fin_at m) x y) = view (fin_at n) y := by
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
 addlensrule fin_at_gso2
 
-theorem fin_at_gso2_comp :
+theorem fin_at_gso2_comp {n' : Nat} {m n : Fin n'} {s a b : Type _} {g : Lens s s a b} {x : b} {y : Fin n' → s} :
   ¬ m = n → view (fin_at n) (set (fin_at m∘∘g) x y) = view (fin_at n) y := by
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
 addlensrule fin_at_gso2_comp
 
-theorem fin_at_gso_comp :
+theorem fin_at_gso_comp {n' : Nat} {n m : Fin n'} {s a b : Type _} {g : Lens s s a b} {x : b} {y : Fin n' → s} :
   ¬ n = m → view (fin_at n) (set (fin_at m∘∘g) x y) = view (fin_at n) y := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
 addlensrule fin_at_gso_comp
 
-theorem fin_at_gso_app :
+theorem fin_at_gso_app {n' : Nat} {n m : Fin n'} {α : Type _} {x : α} {y : Fin n' → α} :
   ¬ n = m → (set (fin_at m) x y) n = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1]
 --addlensrule fin_at_gso_app
 
-theorem fin_at_gso2_app :
+theorem fin_at_gso2_app {n' : Nat} {m n : Fin n'} {α : Type _} {x : α} {y : Fin n' → α} :
   ¬ m = n → (set (fin_at m) x y) n = y n := by
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this]
 --addlensrule fin_at_gso2_app
 
-theorem fin_at_gso2_comp_app :
+theorem fin_at_gso2_comp_app {n' : Nat} {m n : Fin n'} {s a b : Type _} {g : Lens s s a b} {x : b} {y : Fin n' → s} :
   ¬ m = n → (set (fin_at m∘∘g) x y) n = y n := by
   intros h1
   have := Ne.symm h1
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,this,Composable4.comp4,Composable2.comp]
 --addlensrule fin_at_gso2_comp_app
 
-theorem fin_at_gso_comp_app :
+theorem fin_at_gso_comp_app {n' : Nat} {n m : Fin n'} {s a b : Type _} {g : Lens s s a b} {x : b} {y : Fin n' → s} :
   ¬ n = m → (set (fin_at m∘∘g) x y) n = y n := by
   intros h1; simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,h1,Composable4.comp4,Composable2.comp]
 --addlensrule fin_at_gso_comp_app
 
-theorem fin_at_apply :
+theorem fin_at_apply {n' : Nat} {n : Fin n'} {α : Type _} {y : Fin n' → α} :
   view (fin_at n) y = y n := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
 --addlensrule fin_at_apply
 
-theorem fin_at_gss2 :
+theorem fin_at_gss2 {n' : Nat} {n : Fin n'} {α : Type _} {x : α} {y : Fin n' → α} :
   (set (fin_at n) x y) n = x := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
 --addlensrule fin_at_gss2
 
-theorem fin_at_gss2_comp :
+theorem fin_at_gss2_comp {n' : Nat} {n : Fin n'} {s a b : Type _} {g : Lens s s a b} {x : b} {y : Fin n' → s} :
   (set (fin_at n∘∘g) x y) n = set g x (y n) := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
 --addlensrule fin_at_gss2_comp
 
-theorem fin_at_view_comp :
+theorem fin_at_view_comp {n' : Nat} {n : Fin n'} {s a : Type _} {g : Lens s s a a} {x : Fin n' → s} :
   view (fin_at n∘∘g) x = view g (view (fin_at n) x) := by
   simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,Composable4.comp4,Composable2.comp]
 addlensrule fin_at_view_comp
 
-def liftA2 [Applicative F] (f: a → b → c) (x: F a) (y: F b) :=
+def liftA2 {F a b c} [Applicative F] (f: a → b → c) (x: F a) (y: F b) :=
   (f <$> x) <*> y
 
-def traverse_list' [Applicative F] (f: a → F b) : List a → F (List b) :=
+def traverse_list' {F a b} [Applicative F] (f: a → F b) : List a → F (List b) :=
   List.foldr cons_f (pure [])
   where cons_f x ys := liftA2 List.cons (f x) ys
 
-def traverse_list : Traversal' (List a) a :=
+def traverse_list {a} : Traversal' (List a) a :=
   fun F _ inst2 => @traverse_list' F _ _ inst2
 
 def range (n : Nat) : List (Fin n) :=
@@ -527,11 +525,11 @@ where
   | 0,   _,  ns => ns
   | n+1, lt, ns => let ltn := Nat.lt_of_succ_le lt; loop n (Nat.le_of_lt ltn) ({val := n, isLt := ltn}::ns)
 
-def traverse_Fin' [Inhabited b] [Applicative F] (f: a → F b) (l: Fin n → a): F (Fin n → b) :=
+def traverse_Fin' {F a b n} [Inhabited b] [Applicative F] (f: a → F b) (l: Fin n → a): F (Fin n → b) :=
   List.foldr cons_r (pure (fun _ => default)) (range n)
   where cons_r x ys := liftA2 (update_Fin x) (f (l x)) ys
 
-def traverse_Fin'' [Inhabited b] [Applicative F] (f: Nat → a → F b) (l: Fin n → a): F (Fin n → b) :=
+def traverse_Fin'' {F a b n} [Inhabited b] [Applicative F] (f: Nat → a → F b) (l: Fin n → a): F (Fin n → b) :=
   List.foldr cons_r (pure (fun _ => default)) (range n)
   where cons_r x ys := liftA2 (update_Fin x) (f x (l x)) ys
 
@@ -540,7 +538,5 @@ def traverse_Fin {n} {a} [Inhabited a] : Traversal' (Fin n → a) a :=
 
 @[simp]
 def set_Fin {n} {a} [Inhabited a] : ASetter' (Fin n → a) a := @traverse_Fin n a _
-
-set_option autoImplicit false
 
 end Leanses
