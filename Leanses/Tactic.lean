@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2024 Yann Herklotz. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yann Herklotz
+-/
+
 import Lean.Elab.Tactic.Basic
 import Lean.Elab.Tactic.Simp
 import Lean.Meta.Tactic.Simp.SimpTheorems
