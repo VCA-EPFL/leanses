@@ -145,7 +145,7 @@ infix:60 "^.." => fto_list_of
 --------------------------------------------------------------------------------
 
 syntax (priority := high) "<{ " term " with " (term " := " term),+ " }>" : term
-syntax (priority := high) "<{ " term " ... }>" : term
+syntax (priority := high) "<{ " term " ... " " }>" : term
 
 syntax (priority := high) "<{ " term " | " term ("." term)* " }>" : term
 
