@@ -438,7 +438,7 @@ addlensunfoldrule fin_at
 
 theorem fin_at_gss {n : Nat} {m : Fin n} {α : Type _} {x : α} {y : Fin n → α} :
   view (fin_at m) (set (fin_at m) x y) = x := by
-  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,pure]
 addlensrule fin_at_gss
 
 theorem fin_at_gss_comp {n : Nat} {m : Fin n} {s a b : Type _} {g : Lens s s a b} {x : b} {y : Fin n → s} :
@@ -501,7 +501,7 @@ theorem fin_at_apply {n' : Nat} {n : Fin n'} {α : Type _} {y : Fin n' → α} :
 
 theorem fin_at_gss2 {n' : Nat} {n : Fin n'} {α : Type _} {x : α} {y : Fin n' → α} :
   (set (fin_at n) x y) n = x := by
-  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin]
+  simp [fin_at,lens,lens',view,set,Functor.map,Id.run,update_Fin,pure]
 --addlensrule fin_at_gss2
 
 theorem fin_at_gss2_comp {n' : Nat} {n : Fin n'} {s a b : Type _} {g : Lens s s a b} {x : b} {y : Fin n' → s} :
